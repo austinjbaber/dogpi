@@ -235,43 +235,32 @@ def refresh_if_needed(force=False):
 
 
 
-def _get_weather_numeric_str(key: str) -> str | None:
-    """Generic helper for returning a formatted value from *weather*.
-
-    The caller passes a key such as ``"temp_f"`` or ``"feels_f"`` and this
-    function performs the usual staleness check and appends the ``F`` unit.
-    ``None`` is returned if the value is missing or too old.
-    """
+def _weather_val(key: str) -> str | None:
+    """Return a weather value as a plain string (no unit), or None if stale/missing."""
     val = weather.get(key)
     if val is not None:
         age = time.time() - float(weather.get("fetched_at") or 0)
         if age <= WEATHER_MAX_STALE_S:
-            return f"{val}F"
+            return str(val)
     return None
 
 
-def get_weather_temp_str():
-    return _get_weather_numeric_str("temp_f")
-
-
-def get_weather_feels_str():
-    return _get_weather_numeric_str("feels_f")
-
-
 def get_temp_str():
-    """Return a short temperature string for the status screen."""
+    """Return current temp as a plain string (no unit), or None."""
     refresh_if_needed()
-
-    wx = get_weather_temp_str()
+    wx = _weather_val("temp_f")
     if wx:
         return wx
-
     # Fallback: CPU temp (not ambient — placeholder until a sensor is wired)
     try:
         with open("/sys/class/thermal/thermal_zone0/temp", "r") as f:
             c = float(f.read().strip()) / 1000.0
-        f_temp = c * 9.0 / 5.0 + 32.0
-        return f"{f_temp:.0f}F"
+        return f"{c * 9.0 / 5.0 + 32.0:.0f}"
     except Exception:
-        return "--"
+        return None
+
+
+def get_feels_str():
+    """Return feels-like temp as a plain string (no unit), or None."""
+    return _weather_val("feels_f")
 
