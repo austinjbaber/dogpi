@@ -1,0 +1,7 @@
+# Default: treat text as text, normalize to LF in repo and working trees
+* text=auto eol=lf
+
+# If you have Windows-only scripts, keep those CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
