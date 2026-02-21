@@ -9,8 +9,8 @@ from hardware import device, SCREEN_FONT, WHEN_FONT
 from state import log_event, last_dog_where, undo_last_dog_event
 from helpers import iso_from_dt
 from weather import (
-    get_temp_str, weather, fmt_ampm_from_iso, deg_to_cardinal,
-    refresh_if_needed as weather_refresh,
+    get_temp_str, get_weather_feels_str, weather, fmt_ampm_from_iso,
+    deg_to_cardinal, refresh_if_needed as weather_refresh,
 )
 
 # ----------------------------
@@ -198,6 +198,12 @@ def short_since(iso_ts):
 def status_lines():
     now = datetime.now()
     temp = get_temp_str()
+    feels = get_weather_feels_str()
+    # Both helpers already append "F", so simply join when both are present.
+    if temp and feels:
+        temp_str = f"{temp}/{feels}"
+    else:
+        temp_str = temp or "Temp: --"
 
     last_pee  = last_dog_where(lambda e: e.get("value") in ("pee", "both"))
     last_poop = last_dog_where(lambda e: e.get("value") in ("poop", "both"))
@@ -205,7 +211,7 @@ def status_lines():
     time_str = now.strftime("%I:%M %p").lstrip("0")
     date_str = now.strftime("%a %b %d")
     # draw time at left, temp at right; center the date on the next line
-    lines = [(time_str, temp), (date_str, "center"), ""]
+    lines = [(time_str, temp_str), (date_str, "center"), ""]
 
     if last_pee and last_poop and last_pee.get("ts") == last_poop.get("ts"):
         ts = last_pee["ts"]

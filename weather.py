@@ -233,12 +233,29 @@ def refresh_if_needed(force=False):
         weather["err"] = str(e)[:60]
 
 
-def get_weather_temp_str():
-    if weather.get("temp_f") is not None:
+
+
+def _get_weather_numeric_str(key: str) -> str | None:
+    """Generic helper for returning a formatted value from *weather*.
+
+    The caller passes a key such as ``"temp_f"`` or ``"feels_f"`` and this
+    function performs the usual staleness check and appends the ``F`` unit.
+    ``None`` is returned if the value is missing or too old.
+    """
+    val = weather.get(key)
+    if val is not None:
         age = time.time() - float(weather.get("fetched_at") or 0)
         if age <= WEATHER_MAX_STALE_S:
-            return f"{weather['temp_f']}F"
+            return f"{val}F"
     return None
+
+
+def get_weather_temp_str():
+    return _get_weather_numeric_str("temp_f")
+
+
+def get_weather_feels_str():
+    return _get_weather_numeric_str("feels_f")
 
 
 def get_temp_str():
