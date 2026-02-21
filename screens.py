@@ -201,7 +201,7 @@ def status_lines():
     feels = get_feels_str()
 
     if temp and feels:
-        right = f"{temp}/{feels}F"
+        right = f"{temp} / {feels}F"
     elif temp:
         right = f"{temp}F"
     else:
