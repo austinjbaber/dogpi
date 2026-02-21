@@ -12,7 +12,7 @@ WEATHER_LON = -110.9747
 WEATHER_REFRESH_S = 10 * 60          # fetch at most every 10 minutes
 WEATHER_MAX_STALE_S = 2 * 60 * 60    # show cached weather up to 2 hours old
 
-HOURLY_HOURS = 12  # how many hours of forecast to keep
+HOURLY_HOURS = 24  # how many hours of forecast to keep
 
 _next_fetch = 0
 
