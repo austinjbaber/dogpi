@@ -1,4 +1,4 @@
-"""Stateless time-formatting utilities."""
+"""Stateless utilities."""
 
 from datetime import datetime, time, date
 
