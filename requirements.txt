@@ -1,0 +1,14 @@
+cbor2==5.8.0
+colorama==0.4.6
+colorzero==2.0
+gpiozero==2.0.1
+iniconfig==2.3.0
+luma.core==2.5.3
+luma.oled==3.14.0
+packaging==26.0
+pillow==12.1.1
+pluggy==1.6.0
+Pygments==2.19.2
+pytest==9.0.2
+setuptools==82.0.0
+smbus2==0.6.0
