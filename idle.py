@@ -2,6 +2,7 @@
 
 import random
 import time
+from helpers import get_12_hour_clock_time
 from PIL import Image, ImageDraw, ImageFont
 
 from hardware import device, W, H
@@ -95,7 +96,7 @@ def render_idle_frame():
         draw.line((x, y0, x, y1), fill=255)
 
     # --- Time string ---
-    time_str = time.strftime("%I:%M %p").lstrip("0")
+    time_str = get_12_hour_clock_time(time.time())
 
     if time_str != _last_time_str:
         _last_time_str = time_str

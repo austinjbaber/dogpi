@@ -7,7 +7,7 @@ import time
 
 from hardware import device, SCREEN_FONT, WHEN_FONT
 from state import log_event, last_dog_where, undo_last_dog_event
-from helpers import datetime_to_iso_seconds, iso_to_compact_time, short_time_ago, compact_time_with_time_ago, deg_to_cardinal
+from helpers import *
 from weather import (
     get_temp_str, get_feels_str, weather, refresh_if_needed as weather_refresh,
 )
@@ -160,7 +160,7 @@ def commit_pending_log():
     if seconds_ago == 0:
         show_toast(f"Logged: {ui.pending_log_value}")
     else:
-        label = compact_time_with_time_ago(dt)
+        label = iso_to_compact_time_with_time_ago(dt)
         show_toast([f"Logged: {ui.pending_log_value}", f"{label}"])
 
     ui.pending_log_value = None
@@ -184,8 +184,8 @@ def status_lines():
     last_pee  = last_dog_where(lambda e: e.get("value") in ("pee", "both"))
     last_poop = last_dog_where(lambda e: e.get("value") in ("poop", "both"))
 
-    time_str = now.strftime("%I:%M %p").lstrip("0")
-    date_str = now.strftime("%a %b %d")
+    time_str = get_12_hour_clock_time(now.time())
+    date_str = get_long_date(now.date())
     lines = [(time_str, right), (date_str, "center"), ""]
 
     if last_pee and last_poop and last_pee.get("ts") == last_poop.get("ts"):
@@ -228,7 +228,7 @@ def when_lines():
     dt = datetime_to_iso_seconds(datetime.now() - timedelta(seconds=seconds_ago))
 
     time_str = iso_to_compact_time(dt)
-    when_str = compact_time_with_time_ago(dt)
+    when_str = iso_to_compact_time_with_time_ago(dt)
 
     return [
         f"Log: {title}",
@@ -237,7 +237,7 @@ def when_lines():
         f"At: {time_str}",
     ]
 
-def _v(val, suffix=""):
+def _safe_display(val, suffix=""):
     """Format a value with a fallback of '--'."""
     return f"{val}{suffix}" if val is not None else f"--{suffix}"
 
@@ -257,7 +257,7 @@ def weather_lines():
     ss = iso_to_compact_time(weather.get("sunset"))
 
     wd_card = deg_to_cardinal(wind_dir) if wind_dir is not None else ""
-    wind_str = f"{_v(wind, 'mph')} {wd_card}".strip()
+    wind_str = f"{_safe_display(wind, 'mph')} {wd_card}".strip()
 
     age_m = int(max(0, (time.time() - float(weather.get("fetched_at") or 0)) // 60))
     stale = "" if age_m < 60 else f" ({age_m // 60}h)"
@@ -270,12 +270,12 @@ def weather_lines():
 
     C = "center"  # shorthand
     lines = [
-        (f"Now: {_v(t, 'F')}", C),
-        (f"Feels: {_v(f, 'F')}", C),
-        (f"Rain: {_v(pop, '%')}", C),
+        (f"Now: {_safe_display(t, 'F')}", C),
+        (f"Feels: {_safe_display(f, 'F')}", C),
+        (f"Rain: {_safe_display(pop, '%')}", C),
         (f"Wind: {wind_str}", C),
-        (f"Humidity: {_v(rh, '%')}", C),
-        (f"Hi: {_v(hi, 'F')}  Lo: {_v(lo, 'F')}", C),
+        (f"Humidity: {_safe_display(rh, '%')}", C),
+        (f"Hi: {_safe_display(hi, 'F')}  Lo: {_safe_display(lo, 'F')}", C),
         (f"Sunrise: {sr}", C),
         (f"Sunset: {ss}", C),
         (f"{fetched_str}  {age_m}m ago{stale}", C),
@@ -301,8 +301,8 @@ def forecast_lines():
 
     for h in hourly:
         time_str = h.get("time_str", "?")
-        temp = _v(h.get("temp_f"), "F")
-        pop = _v(h.get("pop"), "%")
+        temp = _safe_display(h.get("temp_f"), "F")
+        pop = _safe_display(h.get("pop"), "%")
         abbr = h.get("abbr", "")
         lines.append((f"{time_str}  {temp}  {pop}  {abbr}", L))
 

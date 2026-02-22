@@ -1,6 +1,6 @@
 """Stateless time-formatting utilities."""
 
-from datetime import datetime
+from datetime import datetime, time, date
 
 
 def datetime_to_iso_seconds(dt:datetime):
@@ -43,7 +43,7 @@ def iso_to_compact_time(iso_local:str):
         return "--"
 
 
-def compact_time_with_time_ago(iso_local:str):
+def iso_to_compact_time_with_time_ago(iso_local:str):
     '''
     Returns the compact time with how long ago it was. Ex. '6:30a (5m ago)'
     '''
@@ -77,3 +77,11 @@ def deg_to_cardinal(degrees:str):
         return dirs[ix]
     except Exception:
         return ""
+    
+def get_12_hour_clock_time(time:time):
+    '''Returns the 12 hour clock format, without leading zeros. Eg. 6:30 AM'''
+    return time.strftime("%I:%M %p").lstrip("0")
+
+def get_long_date(date:date):
+    '''Returns the date formated as 'weekday name, month name day of month' without the year.'''
+    return date.strftime("%a, %b %d")
