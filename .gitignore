@@ -1,0 +1,8 @@
+# Ignore pycache
+*.pyc
+
+# Ignore venv if it exists
+venv\
+
+# Ignore environment files if exists
+*.env
