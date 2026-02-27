@@ -227,7 +227,7 @@ def when_lines():
     seconds_ago = hrs * 3600 + mins * 60
     dt = datetime_to_iso_seconds(datetime.now() - timedelta(seconds=seconds_ago))
 
-    time_str = iso_to_compact_time(dt)
+    time_str = get_12_hour_clock_time(dt)
     
     # The [] tell the user where they are inputting values
     if ui.when_field == "hours":
