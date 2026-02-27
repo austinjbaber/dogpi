@@ -7,10 +7,9 @@ import time
 
 from hardware import device, SCREEN_FONT, WHEN_FONT
 from state import log_event, last_dog_where, undo_last_dog_event
-from helpers import iso_from_dt
+from helpers import *
 from weather import (
-    get_temp_str, get_feels_str, weather, fmt_ampm_from_iso,
-    deg_to_cardinal, refresh_if_needed as weather_refresh,
+    get_temp_str, get_feels_str, weather, refresh_if_needed as weather_refresh,
 )
 
 # ----------------------------
@@ -140,7 +139,7 @@ def do_menu_action(action):
     if action["type"] == "undo":
         removed = undo_last_dog_event()
         if removed:
-            show_toast(f"Undid: {removed.get('value')} at {hhmm_ampm(removed.get('ts'))}")
+            show_toast(f"Undid: {removed.get('value')} at {iso_to_compact_time(removed.get('ts'))}")
         else:
             show_toast("Nothing to undo")
         ui.mode = MODE_STATUS
@@ -155,16 +154,13 @@ def commit_pending_log():
     mins = MINUTES_OPTIONS[ui.when_min_idx]
     seconds_ago = ui.when_hours * 3600 + mins * 60
 
-    dt = datetime.now() - timedelta(seconds=seconds_ago)
-    log_event({"type": "dog", "value": ui.pending_log_value, "ts": iso_from_dt(dt)})
+    dt = datetime_to_iso_seconds(datetime.now() - timedelta(seconds=seconds_ago))
+    log_event({"type": "dog", "value": ui.pending_log_value, "ts": dt})
 
     if seconds_ago == 0:
         show_toast(f"Logged: {ui.pending_log_value}")
     else:
-        if ui.when_hours == 0:
-            label = f"{mins}m ago"
-        else:
-            label = f"{ui.when_hours}h {mins}m ago"
+        label = iso_to_compact_time_with_time_ago(dt)
         show_toast([f"Logged: {ui.pending_log_value}", f"{label}"])
 
     ui.pending_log_value = None
@@ -173,28 +169,6 @@ def commit_pending_log():
 # ----------------------------
 # Line builders
 # ----------------------------
-def hhmm_ampm(iso_ts):
-    if not iso_ts:
-        return "--:--"
-    t = datetime.fromisoformat(iso_ts)
-    return t.strftime("%I:%M %p").lstrip("0")
-
-
-def short_since(iso_ts):
-    if not iso_ts:
-        return "never"
-    t = datetime.fromisoformat(iso_ts)
-    mins = int((datetime.now() - t).total_seconds() // 60)
-    if mins < 1:
-        return "now"
-    if mins < 60:
-        return f"{mins}m"
-    h, m = divmod(mins, 60)
-    if h >= 10:
-        return ">10h"
-    return f"{h}h{m}m"
-
-
 def status_lines():
     now = datetime.now()
     temp = get_temp_str()
@@ -210,23 +184,23 @@ def status_lines():
     last_pee  = last_dog_where(lambda e: e.get("value") in ("pee", "both"))
     last_poop = last_dog_where(lambda e: e.get("value") in ("poop", "both"))
 
-    time_str = now.strftime("%I:%M %p").lstrip("0")
-    date_str = now.strftime("%a %b %d")
+    time_str = get_12_hour_clock_time(now.time())
+    date_str = get_long_date(now.date())
     lines = [(time_str, right), (date_str, "center"), ""]
 
     if last_pee and last_poop and last_pee.get("ts") == last_poop.get("ts"):
         ts = last_pee["ts"]
-        lines.append(f"Both: {hhmm_ampm(ts)} ({short_since(ts)})")
+        lines.append(f"Both: {iso_to_compact_time(ts)} ({short_time_ago(ts)})")
     else:
         if last_pee:
             ts = last_pee["ts"]
-            lines.append(f"Pee: {hhmm_ampm(ts)} ({short_since(ts)})")
+            lines.append(f"Pee: {iso_to_compact_time(ts)} ({short_time_ago(ts)})")
         else:
             lines.append("Pee: --:--  never")
 
         if last_poop:
             ts = last_poop["ts"]
-            lines.append(f"Poo: {hhmm_ampm(ts)} ({short_since(ts)})")
+            lines.append(f"Poo: {iso_to_compact_time(ts)} ({short_time_ago(ts)})")
         else:
             lines.append("Both: --:--  never")
 
@@ -252,11 +226,15 @@ def when_lines():
     # compute the actual clock time that corresponds to the "how long ago" selection
     seconds_ago = hrs * 3600 + mins * 60
     dt = datetime.now() - timedelta(seconds=seconds_ago)
-    time_str = dt.strftime("%I:%M %p").lstrip("0")
+
+    time_str = get_12_hour_clock_time(dt.time())
+    
+    # The [] tell the user where they are inputting values
     if ui.when_field == "hours":
         when_str = f"[{hrs}h] {mins}m ago"
     else:
         when_str = f"{hrs}h [{mins}m] ago"
+
     return [
         f"Log: {title}",
         "",
@@ -264,7 +242,7 @@ def when_lines():
         f"At: {time_str}",
     ]
 
-def _v(val, suffix=""):
+def _safe_display(val, suffix=""):
     """Format a value with a fallback of '--'."""
     return f"{val}{suffix}" if val is not None else f"--{suffix}"
 
@@ -280,29 +258,29 @@ def weather_lines():
     pop = weather.get("pop")
     hi = weather.get("hi_f")
     lo = weather.get("lo_f")
-    sr = fmt_ampm_from_iso(weather.get("sunrise"))
-    ss = fmt_ampm_from_iso(weather.get("sunset"))
+    sr = iso_to_compact_time(weather.get("sunrise"))
+    ss = iso_to_compact_time(weather.get("sunset"))
 
     wd_card = deg_to_cardinal(wind_dir) if wind_dir is not None else ""
-    wind_str = f"{_v(wind, 'mph')} {wd_card}".strip()
+    wind_str = f"{_safe_display(wind, 'mph')} {wd_card}".strip()
 
     age_m = int(max(0, (time.time() - float(weather.get("fetched_at") or 0)) // 60))
     stale = "" if age_m < 60 else f" ({age_m // 60}h)"
 
     fetched_at = weather.get("fetched_at")
     if fetched_at:
-        fetched_str = datetime.fromtimestamp(fetched_at).strftime("%I:%M%p").lstrip("0").lower()
+        fetched_str = iso_to_compact_time(fetched_at)
     else:
         fetched_str = "--:--"
 
     C = "center"  # shorthand
     lines = [
-        (f"Now: {_v(t, 'F')}", C),
-        (f"Feels: {_v(f, 'F')}", C),
-        (f"Rain: {_v(pop, '%')}", C),
+        (f"Now: {_safe_display(t, 'F')}", C),
+        (f"Feels: {_safe_display(f, 'F')}", C),
+        (f"Rain: {_safe_display(pop, '%')}", C),
         (f"Wind: {wind_str}", C),
-        (f"Humidity: {_v(rh, '%')}", C),
-        (f"Hi: {_v(hi, 'F')}  Lo: {_v(lo, 'F')}", C),
+        (f"Humidity: {_safe_display(rh, '%')}", C),
+        (f"Hi: {_safe_display(hi, 'F')}  Lo: {_safe_display(lo, 'F')}", C),
         (f"Sunrise: {sr}", C),
         (f"Sunset: {ss}", C),
         (f"{fetched_str}  {age_m}m ago{stale}", C),
@@ -328,8 +306,8 @@ def forecast_lines():
 
     for h in hourly:
         time_str = h.get("time_str", "?")
-        temp = _v(h.get("temp_f"), "F")
-        pop = _v(h.get("pop"), "%")
+        temp = _safe_display(h.get("temp_f"), "F")
+        pop = _safe_display(h.get("pop"), "%")
         abbr = h.get("abbr", "")
         lines.append((f"{time_str}  {temp}  {pop}  {abbr}", L))
 

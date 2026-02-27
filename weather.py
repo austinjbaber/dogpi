@@ -99,28 +99,7 @@ def _safe_round(x):
         return None
 
 
-def fmt_ampm_from_iso(iso_local):
-    """Format an ISO local timestamp as a compact AM/PM string (e.g. '6:30a')."""
-    try:
-        dt = datetime.fromisoformat(iso_local)
-        return dt.strftime("%I:%M%p").lstrip("0").lower().replace("am", "a").replace("pm", "p")
-    except Exception:
-        return "--"
-
-
-def deg_to_cardinal(d):
-    """Convert degrees to nearest 16-point compass label."""
-    try:
-        d = float(d)
-    except Exception:
-        return ""
-    dirs = ["N","NNE","NE","ENE","E","ESE","SE","SSE",
-            "S","SSW","SW","WSW","W","WNW","NW","NNW"]
-    ix = int((d + 11.25) / 22.5) % 16
-    return dirs[ix]
-
-
-def _fetch_openmeteo(lat, lon):
+def _fetch_openmeteo(lat:float, lon:float):
     params = {
         "latitude": f"{lat:.4f}",
         "longitude": f"{lon:.4f}",
@@ -263,4 +242,3 @@ def get_temp_str():
 def get_feels_str():
     """Return feels-like temp as a plain string (no unit), or None."""
     return _weather_val("feels_f")
-

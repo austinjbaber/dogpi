@@ -103,7 +103,7 @@ dogpi/
 ├── app.py           Main loop — imports everything, runs the UI
 ├── hardware.py      Buttons, OLED device, font loading
 ├── state.py         JSON persistence (dog_log.json) and event helpers
-├── helpers.py       Stateless time-formatting utilities
+├── helpers/         Container folders for various utilities
 ├── weather.py       Open-Meteo API fetch, caching, temperature + hourly forecast
 ├── screens.py       Shared UI state, rendering, screen content builders
 ├── idle.py          Rain + DVD-bounce clock animation
