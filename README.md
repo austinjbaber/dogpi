@@ -28,7 +28,7 @@ sudo apt update
 sudo apt install -y python3-pip i2c-tools \
   fonts-dejavu fonts-liberation fonts-freefont-ttf
 
-pip3 install gpiozero luma.oled Pillow
+pip3 install -r requirements.txt
 ```
 
 ## Usage

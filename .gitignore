@@ -6,3 +6,6 @@ venv\
 
 # Ignore environment files if exists
 *.env
+
+# Ignore event logs
+dog_log.json
