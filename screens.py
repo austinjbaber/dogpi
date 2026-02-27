@@ -228,7 +228,12 @@ def when_lines():
     dt = datetime_to_iso_seconds(datetime.now() - timedelta(seconds=seconds_ago))
 
     time_str = iso_to_compact_time(dt)
-    when_str = iso_to_compact_time_with_time_ago(dt)
+    
+    # The [] tell the user where they are inputting values
+    if ui.when_field == "hours":
+        when_str = f"[{hrs}h] {mins}m ago"
+    else:
+        when_str = f"{hrs}h [{mins}m] ago"
 
     return [
         f"Log: {title}",
