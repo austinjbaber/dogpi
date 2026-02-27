@@ -225,9 +225,9 @@ def when_lines():
     mins = MINUTES_OPTIONS[ui.when_min_idx]
     # compute the actual clock time that corresponds to the "how long ago" selection
     seconds_ago = hrs * 3600 + mins * 60
-    dt = datetime_to_iso_seconds(datetime.now() - timedelta(seconds=seconds_ago))
+    dt = datetime.now() - timedelta(seconds=seconds_ago)
 
-    time_str = get_12_hour_clock_time(dt)
+    time_str = get_12_hour_clock_time(dt.time())
     
     # The [] tell the user where they are inputting values
     if ui.when_field == "hours":
