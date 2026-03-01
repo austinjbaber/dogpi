@@ -1,4 +1,9 @@
 {
+    "base_url" : "https://api.open-meteo.com/v1",
+    "default_headers" : {
+        "User-Agent": "DogPi/1.0",
+        "Accept": "application/json"
+    },
     "latitude" : 32.2226,
     "longitude" : -110.9747,
     "refresh_interval_seconds" : 600,
