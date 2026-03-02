@@ -1,5 +1,5 @@
-from .IHttpService import IHttpService
-from .models.HttpResponse import HttpResponse
+from services.http.IHttpService import IHttpService
+from services.http.models.HttpResponse import HttpResponse
 from urllib.parse import urlencode, urljoin, urlparse, ParseResult
 from urllib.response import addinfourl
 from urllib.request import Request, urlopen
@@ -71,23 +71,6 @@ class HttpService(IHttpService):
         return True
     
     def get(self, relative_url: str = None, headers: dict[str, str] | None = None, params: dict[str, str] | None = None) -> HttpResponse:
-        """
-        Perform a GET request for the relative url specified.
-
-        Parameters
-        ----------
-        relative_url : str, optional
-            The partial web address that specifies the location of a resource relative to base_url. This can be passed with or without the leading forward slash.  
-            Example: ``get("/users") or get("user")``
-
-        headers : dict[str, str], optional
-            Additional headers to combine with default_headers to be sent with the request.  
-            Example: ``{"User-Agent": "Example"}``
-
-        params : dict[str, str], optional
-            Dictionary of query parameters to append to the URL.  
-            Example: ``{"Name": "John"}``
-        """
         # Hardening
         if not relative_url is None and not isinstance(relative_url, str):
             raise TypeError(f"Invalid 'url' parameter type. Received {type(relative_url)}, but expected str")
