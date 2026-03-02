@@ -1,5 +1,5 @@
 from services.http.IHttpService import IHttpService
-from services.http.models.HttpResponse import HttpResponse
+from services.http.models import HttpResponse
 from urllib.parse import urlencode, urljoin, urlparse, ParseResult
 from urllib.response import addinfourl
 from urllib.request import Request, urlopen
