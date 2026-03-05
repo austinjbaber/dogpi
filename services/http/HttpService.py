@@ -7,7 +7,7 @@ from urllib.error import URLError, HTTPError
 
 class HttpService(IHttpService):
     """
-    HTTP service client for a single server.
+    HTTP service for a single server.
 
     Absolute URLs are built by combining the base URL with relative URLs.
 
