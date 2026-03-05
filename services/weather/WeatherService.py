@@ -14,7 +14,7 @@ class WeatherService(IWeatherService):
         self.forcast_horizon_hours = self.config.forcast_horizon_hours
         self.weather: dict = None
         self.last_update: datetime = None
-        self.time_zone: ZoneInfo = None
+        self.time_zone: ZoneInfo = None  
 
     def _fetch_openmeteo_data(self) -> bool:
         params:dict = self.request_parameters
@@ -27,12 +27,12 @@ class WeatherService(IWeatherService):
             if not response.status_code == 200:
                 return False
             
-            
             self.weather = response.body_to_json_object()
             self.last_update = datetime.now(UTC).isoformat(timespec="seconds")
             self.time_zone = ZoneInfo(self.weather.get("timezone"))
             return True
         except Exception as e:
+            # Log exceptions here
             print(f"Error: {repr(e)}")
             return False
     
@@ -47,18 +47,15 @@ class WeatherService(IWeatherService):
         current: dict = self.weather.get("current", {})
         data.current = Current()
         data.current.temperature = Temperature(
-            # TODO: Add Celcius
-            fahrenheit = current.get("temperature_2m")
+            current.get("temperature_2m")
         )
         data.current.apparent_temperature = Temperature(
-            # TODO: Add Celcius
-            fahrenheit = current.get("apparent_temperature")
+            current.get("apparent_temperature")
         )
         data.current.relative_humidity = current.get("relative_humidity_2m")
         data.current.wind= WindVector(
-            # TODO: Add kph
-            speed_mph = current.get("wind_speed_10m"),
-            direction = current.get("wind_direction_10m")
+            current.get("wind_speed_10m"),
+            current.get("wind_direction_10m")
         )
     
     def _get_daily_values(self, data: WeatherData):
@@ -66,12 +63,10 @@ class WeatherService(IWeatherService):
         data.daily = Daily()
         data.daily.precipitation_probability = daily.get("precipitation_probability_max")[0]
         data.daily.high = Temperature(
-            # TODO: Add Celcius
-            fahrenheit=daily.get("temperature_2m_max")[0]
+            daily.get("temperature_2m_max")[0]
         )
         data.daily.low = Temperature(
-            # TODO: Add Celcius
-            fahrenheit=daily.get("temperature_2m_min")[0]
+            daily.get("temperature_2m_min")[0]
         )
         data.daily.sunrise = datetime.fromisoformat(daily.get("sunrise")[0]).replace(tzinfo=self.time_zone)
         data.daily.sunset = datetime.fromisoformat(daily.get("sunset")[0]).replace(tzinfo=self.time_zone)
@@ -94,8 +89,7 @@ class WeatherService(IWeatherService):
             hourly_forecast = HourForecast()
             hourly_forecast.time = datetime.fromisoformat(times[idx]).replace(tzinfo=self.time_zone)
             hourly_forecast.temperature = Temperature(
-                # TODO: Add celcius
-                fahrenheit = temps[idx]
+                temps[idx]
             )
             hourly_forecast.precipitation_probability = pops[idx]
             hourly_forecast.weather_code = codes[idx]
