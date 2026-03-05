@@ -93,6 +93,8 @@ class WeatherService(IWeatherService):
             )
             hourly_forecast.precipitation_probability = pops[idx]
             hourly_forecast.weather_code = codes[idx]
+            hourly_forecast.wmo_abbr = self.config.wmo_abbr[str(codes[idx])]
+            hourly_forecast.wmo_desc = self.config.wmo_desc[str(codes[idx])]
             data.hourly.append(hourly_forecast)
 
     def get_weather_data(self) -> WeatherData | None:

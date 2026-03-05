@@ -33,7 +33,7 @@
     },
     "refresh_interval_seconds" : 600,
     "forcast_horizon_hours" : 24,
-    "wmo_codes" : 
+    "wmo_desc" : 
     {
         "0": "Clear",
         "1": "Mostly Clr",

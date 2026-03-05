@@ -8,3 +8,5 @@ class HourForecast:
     temperature: Temperature = None
     precipitation_probability: int = None
     weather_code: int = None
+    wmo_abbr: str = None
+    wmo_desc: str = None
