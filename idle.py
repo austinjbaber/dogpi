@@ -1,6 +1,7 @@
 """Idle screen — rain animation with a DVD-bounce clock."""
 
 from importlib.resources import path
+import math
 import random
 import time
 from datetime import datetime
@@ -31,10 +32,122 @@ drops = [{
     "spd": rng.uniform(DROP_SPD_MIN, DROP_SPD_MAX),
 } for _ in range(NUM_DROPS)]
 
+def _draw_rain(draw, step):
+    for d in drops:
+        d["y"] += d["spd"] * step
+        if d["y"] - d["len"] > H:
+            d["x"]   = rng.randrange(0, W)
+            d["y"]   = rng.uniform(-10, 0)
+            d["len"] = rng.randint(DROP_LEN_MIN, DROP_LEN_MAX)
+            d["spd"] = rng.uniform(DROP_SPD_MIN, DROP_SPD_MAX)
+        x  = int(d["x"])
+        y0 = int(d["y"] - d["len"])
+        y1 = int(d["y"])
+        draw.line((x, y0, x, y1), fill=255)
+
+# ----------------------------
+# Icosahedron background
+# ----------------------------
+_phi = (1.0 + math.sqrt(5.0)) / 2.0
+
+_ICO_VERTS = [
+    (-1,  _phi, 0), ( 1,  _phi, 0), (-1, -_phi, 0), ( 1, -_phi, 0),
+    (0, -1,  _phi), (0,  1,  _phi), (0, -1, -_phi), (0,  1, -_phi),
+    ( _phi, 0, -1), ( _phi, 0,  1), (-_phi, 0, -1), (-_phi, 0,  1),
+]
+
+_ICO_EDGES = [
+    (0,11),(0,5),(0,1),(0,7),(0,10),
+    (1,5),(1,9),(1,8),(1,7),
+    (2,3),(2,4),(2,6),(2,10),(2,11),
+    (3,4),(3,9),(3,8),(3,6),
+    (4,5),(4,9),(4,11),
+    (5,9),(5,11),
+    (6,7),(6,8),(6,10),
+    (7,8),(7,10),
+    (8,9),
+    (10,11),
+]
+
+_max_r = max(math.sqrt(x*x+y*y+z*z) for x,y,z in _ICO_VERTS)
+_ICO_VERTS = [(x/_max_r, y/_max_r, z/_max_r) for x,y,z in _ICO_VERTS]
+
+_ICO_CAMERA_Z  = 4.0
+_ICO_SCALE     = 18.0
+_ICO_MARGIN    = 12
+_ICO_ROT_X_SPD = 0.45
+_ICO_ROT_Y_SPD = 0.70
+_ICO_ROT_Z_SPD = 0.25
+
+_ico_ax = _ico_ay = _ico_az = 0.0
+_ico_cx, _ico_cy = W / 2.0, H / 2.0
+_ico_vx = rng.uniform(6, 12) * rng.choice((-1, 1))
+_ico_vy = rng.uniform(4, 8)  * rng.choice((-1, 1))
+
+def _ico_rotate(verts, ax, ay, az):
+    sx, cx = math.sin(ax), math.cos(ax)
+    sy, cy = math.sin(ay), math.cos(ay)
+    sz, cz = math.sin(az), math.cos(az)
+    out = []
+    for x, y, z in verts:
+        y, z = y*cx - z*sx, y*sx + z*cx
+        x, z = x*cy + z*sy, -x*sy + z*cy
+        x, y = x*cz - y*sz, x*sz + y*cz
+        out.append((x, y, z))
+    return out
+
+def _ico_project(verts, cx, cy):
+    pts = []
+    for x, y, z in verts:
+        f = _ICO_CAMERA_Z / (_ICO_CAMERA_Z + z)
+        px = int(cx + x * _ICO_SCALE * f)
+        py = int(cy + y * _ICO_SCALE * f)
+        pts.append((px, py))
+    return pts
+
+def _draw_icosahedron(draw, step):
+    global _ico_ax, _ico_ay, _ico_az, _ico_cx, _ico_cy, _ico_vx, _ico_vy
+
+    dt = step / 40.0
+
+    _ico_ax += _ICO_ROT_X_SPD * dt
+    _ico_ay += _ICO_ROT_Y_SPD * dt
+    _ico_az += _ICO_ROT_Z_SPD * dt
+
+    _ico_cx += _ico_vx * dt
+    _ico_cy += _ico_vy * dt
+    if _ico_cx < _ICO_MARGIN:
+        _ico_cx = _ICO_MARGIN; _ico_vx = abs(_ico_vx)
+    if _ico_cx > W - _ICO_MARGIN:
+        _ico_cx = W - _ICO_MARGIN; _ico_vx = -abs(_ico_vx)
+    if _ico_cy < _ICO_MARGIN:
+        _ico_cy = _ICO_MARGIN; _ico_vy = abs(_ico_vy)
+    if _ico_cy > H - _ICO_MARGIN:
+        _ico_cy = H - _ICO_MARGIN; _ico_vy = -abs(_ico_vy)
+
+    rotated   = _ico_rotate(_ICO_VERTS, _ico_ax, _ico_ay, _ico_az)
+    projected = _ico_project(rotated, _ico_cx, _ico_cy)
+
+    for a, b in _ICO_EDGES:
+        draw.line((projected[a], projected[b]), fill=255)
+    for px, py in projected:
+        if 0 <= px < W and 0 <= py < H:
+            draw.point((px, py), fill=255)
+
+# ----------------------------
+# Background cycling
+# ----------------------------
+_backgrounds = [_draw_rain, _draw_icosahedron]
+_bg_index = 0
+
+def _cycle_background():
+    global _bg_index
+    _bg_index = (_bg_index + 1) % len(_backgrounds)
+
 # ----------------------------
 # DVD bounce
 # ----------------------------
-MIN_SPD, MAX_SPD = 0.5, 1.5
+MIN_SPD, MAX_SPD = 0.5, 1.2
 
 def _rand_speed():
     return rng.uniform(MIN_SPD, MAX_SPD)
@@ -58,9 +171,8 @@ _font_index = 0
 
 
 def _load_font():
-    """Return the currently selected font.
-
-    The index is advanced by pressing the DOWN button (hardware.BTN_DOWN).
+    """Return the currently selected font
+    The index is cycled by pressing the DOWN button
     """
     try:
         return ImageFont.truetype(_font_paths[_font_index], 20)
@@ -69,15 +181,9 @@ def _load_font():
 
 
 def _cycle_font():
-    """Move to the next font in the list and force a reload of the time string.
-
-    This function is bound to ``BTN_DOWN.when_pressed`` during module import so
-    that the user can press the hardware button to change the font while the
-    idle animation is running.
-    """
+    """Move to the next font in the list   """
     global _font_index, _last_time_str
     _font_index = (_font_index + 1) % len(_font_paths)
-    # reset last time to trigger a size recalculation on next frame
     _last_time_str = None
 
 def render_idle_frame():
@@ -94,19 +200,8 @@ def render_idle_frame():
     img = Image.new("1", (W, H), 0)
     draw = ImageDraw.Draw(img)
 
-    # --- Rain ---
-    for d in drops:
-        d["y"] += d["spd"] * step
-        if d["y"] - d["len"] > H:
-            d["x"]   = rng.randrange(0, W)
-            d["y"]   = rng.uniform(-10, 0)
-            d["len"] = rng.randint(DROP_LEN_MIN, DROP_LEN_MAX)
-            d["spd"] = rng.uniform(DROP_SPD_MIN, DROP_SPD_MAX)
-
-        x  = int(d["x"])
-        y0 = int(d["y"] - d["len"])
-        y1 = int(d["y"])
-        draw.line((x, y0, x, y1), fill=255)
+    # --- Background ---
+    _backgrounds[_bg_index](draw, step)
 
     # --- Time string ---
     time_str = get_12_hour_clock_time(datetime.now().time())

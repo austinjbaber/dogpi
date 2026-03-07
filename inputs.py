@@ -3,7 +3,7 @@
 import time
 
 from hardware import BTN_UP, BTN_DOWN, BTN_SEL, device, SCREEN_FONT
-from idle import _cycle_font
+from idle import _cycle_font, _cycle_background
 from screens import (
     ui,
     MODE_IDLE, MODE_STATUS, MODE_MENU, MODE_WHEN, MODE_WEATHER, MODE_FORECAST,
@@ -13,7 +13,7 @@ from screens import (
 
 
 def _register_input_and_maybe_wake():
-    """Mark activity; return True if the press was consumed just to wake from idle."""
+    """Mark activity; return True if the select button was consumed just to wake from idle."""
     ui.last_input_t = time.monotonic()
     if ui.mode == MODE_IDLE:
         ui.mode = MODE_STATUS
@@ -22,11 +22,8 @@ def _register_input_and_maybe_wake():
 
 
 def on_up():
-    # when the system is idling we do not want any button other than select
-    # to interrupt the animation.  the up button has no effect in that state
-    # so just ignore it entirely (this makes the behaviour symmetric with
-    # on_down, and keeps font‑cycling free of spurious wakeups).
     if ui.mode == MODE_IDLE:
+        _cycle_background()
         return
 
     if _register_input_and_maybe_wake():
