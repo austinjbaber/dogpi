@@ -1,5 +1,6 @@
 """Idle screen — rain animation with a DVD-bounce clock."""
 
+from importlib.resources import path
 import random
 import time
 from datetime import datetime
@@ -47,31 +48,42 @@ _idle_font     = None
 _tbx0 = _tby0  = 0
 _tw   = _th     = 0
 
+# font cycling globals
+_font_paths = [
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+    "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf",
+    "/usr/share/fonts/truetype/freefont/FreeSansBoldOblique.ttf",
+]
+_font_index = 0
 
-def _load_best_font(draw, text="88:88 PM", sizes=(18, 16, 14)):
-    font_paths = (
-        "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-    )
-    for size in sizes:
-        for path in font_paths:
-            try:
-                f = ImageFont.truetype(path, size)
-                x0, y0, x1, y1 = draw.textbbox((0, 0), text, font=f)
-                tw, th = (x1 - x0), (y1 - y0)
 
-                box_w = tw + 2 * (IDLE_PAD + IDLE_BORDER)
-                box_h = th + 2 * (IDLE_PAD + IDLE_BORDER)
-                if box_w <= W and box_h <= H:
-                    return f
-            except Exception:
-                pass
-    return ImageFont.load_default()
+def _load_font():
+    """Return the currently selected font.
 
+    The index is advanced by pressing the DOWN button (hardware.BTN_DOWN).
+    """
+    try:
+        return ImageFont.truetype(_font_paths[_font_index], 20)
+    except Exception:
+        return ImageFont.load_default()
+
+
+def _cycle_font():
+    """Move to the next font in the list and force a reload of the time string.
+
+    This function is bound to ``BTN_DOWN.when_pressed`` during module import so
+    that the user can press the hardware button to change the font while the
+    idle animation is running.
+    """
+    global _font_index, _last_time_str
+    _font_index = (_font_index + 1) % len(_font_paths)
+    # reset last time to trigger a size recalculation on next frame
+    _last_time_str = None
 
 def render_idle_frame():
     global _last_t, _tx, _ty, _vx, _vy
     global _last_time_str, _idle_font, _tbx0, _tby0, _tw, _th
+    global _font_index
 
     now_m = time.monotonic()
     dt = now_m - _last_t
@@ -101,7 +113,7 @@ def render_idle_frame():
 
     if time_str != _last_time_str:
         _last_time_str = time_str
-        _idle_font = _load_best_font(draw, text="88:88 PM")
+        _idle_font = _load_font()
 
         _tbx0, _tby0, tbx1, tby1 = draw.textbbox((0, 0), time_str, font=_idle_font)
         _tw, _th = (tbx1 - _tbx0), (tby1 - _tby0)
