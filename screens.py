@@ -8,9 +8,9 @@ import time
 from hardware import device, SCREEN_FONT, WHEN_FONT
 from state import log_event, last_dog_where, undo_last_dog_event
 from helpers import *
-from weather import (
-    get_temp_str, get_feels_str, weather, refresh_if_needed as weather_refresh,
-)
+from config import Config
+from services import HttpService, WeatherService
+from services.weather.models import HourForecast
 
 # ----------------------------
 # Mode constants
@@ -170,9 +170,10 @@ def commit_pending_log():
 # Line builders
 # ----------------------------
 def status_lines():
+    weather_refresh()
     now = datetime.now()
-    temp = get_temp_str()
-    feels = get_feels_str()
+    temp = weather.get("temp_f")
+    feels = weather.get("feels_f")
 
     if temp and feels:
         right = f"{temp} / {feels}F"
@@ -312,3 +313,42 @@ def forecast_lines():
         lines.append((f"{time_str}  {temp}  {pop}  {abbr}", L))
 
     return lines
+
+def process_hourly_forcast(forecast: list[HourForecast]) -> list[dict]:
+    hourly: list[dict] = []
+    for hour in forecast:
+        hourly.append(
+            {
+                "time_str" : hour.time,
+                "temp_f"   : hour.temperature,
+                "pop"      : hour.precipitation_probability,
+                "code"     : hour.weather_code,
+                "abbr"     : hour.wmo_abbr,
+                "desc"     : hour.wmo_desc
+            }
+        )
+    return hourly
+
+def weather_refresh():
+    global weather
+    config = Config()
+    base_url = config.base_url
+    default_headers = config.default_headers
+    http_svc = HttpService(base_url = base_url, default_headers= default_headers)
+    weather_svc = WeatherService(http_service=http_svc)
+    weather_data = weather_svc.get_weather_data()
+    weather = {
+        "fetched_at": weather_data.observed_at,
+        "temp_f"    : weather_data.current.temperature.fahrenheit,
+        "feels_f"   : weather_data.current.apparent_temperature.fahrenheit,
+        "rh"        : weather_data.current.relative_humidity,
+        "wind_mph"  : weather_data.current.wind.speed_mph,
+        "wind_dir"  : weather_data.current.wind.direction,
+        "pop"       : weather_data.daily.precipitation_probability,
+        "hi_f"      : weather_data.daily.high.fahrenheit,
+        "lo_f"      : weather_data.daily.low.fahrenheit,
+        "sunrise"   : weather_data.daily.sunrise,
+        "sunset"    : weather_data.daily.sunset,
+        "hourly"    : process_hourly_forcast(weather_data.hourly),
+        "err"       : None,
+    }
