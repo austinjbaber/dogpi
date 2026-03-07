@@ -6,7 +6,16 @@ from datetime import datetime, UTC, timedelta
 from zoneinfo import ZoneInfo
 
 class WeatherService(IWeatherService):
+    _instance = None
+
+    def __new__(cls):
+        if cls._instance is not None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
     def __init__(self, http_service: IHttpService):
+        if hasattr(self, "initialized"):
+            return
         self.http_svc: IHttpService = http_service
         self.config: Config = Config()
         self.request_parameters = self.config.request_parameters
@@ -14,7 +23,8 @@ class WeatherService(IWeatherService):
         self.forcast_horizon_hours = self.config.forcast_horizon_hours
         self.weather: dict = None
         self.last_update: datetime = None
-        self.time_zone: ZoneInfo = None  
+        self.time_zone: ZoneInfo = None
+        self.initialized: bool = True
 
     def _fetch_openmeteo_data(self) -> bool:
         params:dict = self.request_parameters
