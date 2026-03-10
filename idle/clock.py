@@ -16,8 +16,8 @@ class ClockAnimator:
         border=2,
         min_spd=0.4,
         max_spd=0.7,
-        edge_buf_x=8,
-        edge_buf_y=4,
+        edge_buf_x=10,
+        edge_buf_y=7,
         starfield_buffer_ease=0.35,
     ):
         self.width = width
