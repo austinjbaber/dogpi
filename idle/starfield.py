@@ -28,11 +28,6 @@ class StarfieldBackground:
         self.speed = self.speed_min
         self.speed_dir = 1.0
 
-        self.vp_x = self.width / 2.0
-        self.vp_y = self.height / 2.0
-        self.vx = self.rng.uniform(10.0, 20.0) * self.rng.choice((-1, 1))
-        self.vy = self.rng.uniform(8.0, 16.0) * self.rng.choice((-1, 1))
-
         self.stars = [self._new_star() for _ in range(self.num_stars)]
 
     def _new_star(self):
@@ -44,7 +39,7 @@ class StarfieldBackground:
             self.rng.uniform(self.max_depth * 0.5, self.max_depth),
         ]
 
-    def update_and_draw(self, draw, step, clock_box_w, clock_box_h, edge_buf_x, edge_buf_y):
+    def update_and_draw(self, draw, step, vp_x, vp_y):
         dt = step / 40.0
 
         self.speed += self.speed_drift * self.speed_dir * dt
@@ -55,24 +50,6 @@ class StarfieldBackground:
             self.speed = self.speed_min
             self.speed_dir = 1.0
 
-        vp_margin_x = edge_buf_x + (clock_box_w / 2.0)
-        vp_margin_y = edge_buf_y + (clock_box_h / 2.0)
-
-        self.vp_x += self.vx * dt
-        self.vp_y += self.vy * dt
-        if self.vp_x < vp_margin_x:
-            self.vp_x = vp_margin_x
-            self.vx = abs(self.vx)
-        if self.vp_x > self.width - vp_margin_x:
-            self.vp_x = self.width - vp_margin_x
-            self.vx = -abs(self.vx)
-        if self.vp_y < vp_margin_y:
-            self.vp_y = vp_margin_y
-            self.vy = abs(self.vy)
-        if self.vp_y > self.height - vp_margin_y:
-            self.vp_y = self.height - vp_margin_y
-            self.vy = -abs(self.vy)
-
         for star in self.stars:
             old_z = star[2]
             star[2] -= self.speed * dt
@@ -82,12 +59,12 @@ class StarfieldBackground:
                 continue
 
             factor = self.max_depth / star[2]
-            sx = int(self.vp_x + star[0] * factor)
-            sy = int(self.vp_y + star[1] * factor)
+            sx = int(vp_x + star[0] * factor)
+            sy = int(vp_y + star[1] * factor)
 
             old_factor = self.max_depth / old_z
-            sx_old = int(self.vp_x + star[0] * old_factor)
-            sy_old = int(self.vp_y + star[1] * old_factor)
+            sx_old = int(vp_x + star[0] * old_factor)
+            sy_old = int(vp_y + star[1] * old_factor)
 
             if sx < -4 or sx >= self.width + 4 or sy < -4 or sy >= self.height + 4:
                 star[:] = self._new_star()

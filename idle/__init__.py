@@ -58,18 +58,17 @@ def render_idle_frame():
 
     bg_name, background = _backgrounds[_bg_index]
     if bg_name == "starfield":
+        _clock.update_position(step, use_starfield_buffer=True)
         background.update_and_draw(
             draw,
             step,
-            _clock.box_w,
-            _clock.box_h,
-            _clock.edge_buf_x,
-            _clock.edge_buf_y,
+            _clock.tx + (_clock.box_w / 2.0),
+            _clock.ty + (_clock.box_h / 2.0),
         )
+        _clock.draw(draw, time_str)
     else:
         background.update_and_draw(draw, step)
-
-    _clock.update_position(step, use_starfield_buffer=(bg_name == "starfield"))
-    _clock.draw(draw, time_str)
+        _clock.update_position(step, use_starfield_buffer=False)
+        _clock.draw(draw, time_str)
 
     device.display(img)
