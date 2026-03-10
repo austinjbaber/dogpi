@@ -2,7 +2,6 @@
 
 from datetime import datetime
 
-from helpers import get_12_hour_clock_time
 from PIL import ImageFont
 
 
@@ -15,8 +14,8 @@ class ClockAnimator:
         font_paths,
         pad=3,
         border=2,
-        min_spd=0.3,
-        max_spd=0.6,
+        min_spd=0.4,
+        max_spd=0.7,
         edge_buf_x=8,
         edge_buf_y=4,
         starfield_buffer_ease=0.35,
@@ -34,7 +33,7 @@ class ClockAnimator:
         self.starfield_buffer_ease = starfield_buffer_ease
 
         self.font_paths = list(font_paths)
-        self.font_index = 0
+        self.variant_index = 0
 
         self.tx = 0.0
         self.ty = 0.0
@@ -57,12 +56,26 @@ class ClockAnimator:
         except Exception:
             return ImageFont.load_default()
 
+    @property
+    def font_index(self):
+        return self.variant_index // 2
+
+    @property
+    def show_am_pm(self):
+        return (self.variant_index % 2) == 0
+
+    def _format_time(self, now):
+        if self.show_am_pm:
+            return now.strftime("%I:%M %p").lstrip("0")
+        return now.strftime("%I:%M").lstrip("0")
+
     def cycle_font(self):
-        self.font_index = (self.font_index + 1) % len(self.font_paths)
+        variants = len(self.font_paths) * 2
+        self.variant_index = (self.variant_index + 1) % variants
         self.last_time_str = None
 
     def prepare(self, draw):
-        time_str = get_12_hour_clock_time(datetime.now().time())
+        time_str = self._format_time(datetime.now())
 
         if time_str != self.last_time_str:
             self.last_time_str = time_str
