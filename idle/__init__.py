@@ -11,6 +11,7 @@ from .clock import ClockAnimator
 from .icosahedron import IcosahedronBackground
 from .rain import RainBackground
 from .starfield import StarfieldBackground
+from .tesseract import TesseractBackground
 
 _rng = random.Random()
 
@@ -29,6 +30,7 @@ _backgrounds = [
     ("rain", RainBackground(width=W, height=H, rng=_rng)),
     ("icosahedron", IcosahedronBackground(width=W, height=H, rng=_rng)),
     ("starfield", StarfieldBackground(width=W, height=H, rng=_rng)),
+    ("tesseract", TesseractBackground(width=W, height=H, rng=_rng)),
 ]
 _bg_index = 0
 _last_t = time.monotonic()
