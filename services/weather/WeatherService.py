@@ -9,7 +9,7 @@ class WeatherService(IWeatherService):
     _instance = None
 
     def __new__(cls):
-        if cls._instance is not None:
+        if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
 
@@ -21,7 +21,8 @@ class WeatherService(IWeatherService):
         self.request_parameters = self.config.request_parameters
         self.refresh_interval_seconds: timedelta = timedelta(seconds=self.config.refresh_interval_seconds)
         self.forcast_horizon_hours = self.config.forcast_horizon_hours
-        self.weather: dict = None
+        self.weather_dict: dict = None
+        self.weather_data: WeatherData = None
         self.last_update: datetime = None
         self.time_zone: ZoneInfo = None
         self.initialized: bool = True
@@ -37,9 +38,9 @@ class WeatherService(IWeatherService):
             if not response.status_code == 200:
                 return False
             
-            self.weather = response.body_to_json_object()
+            self.weather_dict = response.body_to_json_object()
             self.last_update = datetime.now(UTC).isoformat(timespec="seconds")
-            self.time_zone = ZoneInfo(self.weather.get("timezone"))
+            self.time_zone = ZoneInfo(self.weather_dict.get("timezone"))
             return True
         except Exception as e:
             # Log exceptions here
@@ -54,7 +55,7 @@ class WeatherService(IWeatherService):
         return datetime.now(UTC) > next_update
     
     def _get_current_values(self, data: WeatherData) -> bool:
-        current: dict = self.weather.get("current", {})
+        current: dict = self.weather_dict.get("current", {})
         data.current = Current()
         data.current.temperature = Temperature(
             current.get("temperature_2m")
@@ -69,7 +70,7 @@ class WeatherService(IWeatherService):
         )
     
     def _get_daily_values(self, data: WeatherData):
-        daily: dict = self.weather.get("daily")
+        daily: dict = self.weather_dict.get("daily")
         data.daily = Daily()
         data.daily.precipitation_probability = daily.get("precipitation_probability_max")[0]
         data.daily.high = Temperature(
@@ -83,7 +84,7 @@ class WeatherService(IWeatherService):
 
     def _get_hourly_values(self, data: WeatherData):
         data.hourly = []
-        hourly: dict = self.weather.get("hourly", {})
+        hourly: dict = self.weather_dict.get("hourly", {})
         times = hourly.get("time", [])
         temps = hourly.get("temperature_2m", [])
         pops  = hourly.get("precipitation_probability", [])
@@ -109,11 +110,12 @@ class WeatherService(IWeatherService):
 
     def get_weather_data(self) -> WeatherData | None:
         if self._can_update_data() and self._fetch_openmeteo_data():
-            weather_data = WeatherData()
-            weather_data.observed_at = datetime.fromisoformat(self.weather.get("current").get("time")).replace(tzinfo=self.time_zone)
-            self._get_current_values(weather_data)
-            self._get_daily_values(weather_data)
-            self._get_hourly_values(weather_data)
-            return weather_data
+            self.weather_data = WeatherData()
+            self.weather_data.observed_at = datetime.fromisoformat(self.weather_dict.get("current").get("time")).replace(tzinfo=self.time_zone)
+            self._get_current_values(self.weather_data)
+            self._get_daily_values(self.weather_data)
+            self._get_hourly_values(self.weather_data)
+            return self.weather_data
         
-        return None
+        # Default to most recently gathered weather data
+        return self.weather_data

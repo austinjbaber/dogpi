@@ -1,10 +1,11 @@
 from abc import ABC, abstractmethod
+from services.http.models.HttpResponse import HttpResponse
 
 class IHttpService(ABC):
     '''An interface for HTTP methods.'''
 
     @abstractmethod
-    def get(self, url: str, headers: dict[str, str] | None = None, params: dict[str, str] | None = None):
+    def get(self, url: str, headers: dict[str, str] | None = None, params: dict[str, str] | None = None) -> HttpResponse:
         """
         Perform a GET request for the relative url specified.
 

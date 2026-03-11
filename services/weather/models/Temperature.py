@@ -3,7 +3,7 @@ from helpers import try_round
 
 @dataclass
 class Temperature():
-    """Represents temperature. Will automatically calculate celcius based on fahrenheit and rounds up to the nearest integer."""
+    """Represents temperature. Will automatically calculate celcius based on fahrenheit and rounds both values up to the nearest integer."""
     input_fahrenheit: float
     fahrenheit: int = field(init=False)
     celcius: int = field(init=False)
