@@ -55,14 +55,14 @@ DogPi has 6 modes:
 
 | Screen | UP | SEL | DOWN |
 |---|---|---|---|
-| **Idle** | Wake to Status | Wake to Status | Wake to Status |
+| **Idle** | Cycle Background | Wake to Status | Cycle Font |
 | **Status** | — | Open Menu | — |
 | **Menu** | Scroll Up | Choose | Scroll Down|
 | **When** | Increment | Next/ Confirm | Decrement |
 | **Weather** | Scroll Up | — | Scroll Down |
 | **Forecast** | Scroll Up | — | Scroll Dowm |
 
-**Hold SEL (0.6s)** for “back/cancel” shortcuts:
+**Hold SELECT (0.6s)** for “back/cancel”:
 
 - Status → Idle
 - Menu → Status
@@ -100,14 +100,25 @@ Events are stored in `dog_log.json` as a flat list:
 
 ```
 dogpi/
-├── app.py           Main loop — imports everything, runs the UI
-├── hardware.py      Buttons, OLED device, font loading
+├── app.py           Main loop — runs the active screen or idle renderer
+├── hardware.py      GPIO buttons, SH1106 device setup, shared fonts
 ├── state.py         JSON persistence (dog_log.json) and event helpers
-├── helpers/         Container folders for various utilities
-├── weather.py       Open-Meteo API fetch, caching, temperature + hourly forecast
-├── screens.py       Shared UI state, rendering, screen content builders
-├── idle.py          Rain + DVD-bounce clock animation
-├── inputs.py        Button callback handlers and wiring
+├── weather.py       Open-Meteo fetch, cache, current conditions, hourly forecast
+├── screens.py       Shared UI state, rendering, menus, status/weather builders
+├── inputs.py        Button callbacks, hold-to-cancel logic, input wiring
+├── helpers/         Time and direction formatting helpers
+│   ├── time_helpers.py
+│   └── direction_helpers.py
+├── idle/            Idle-mode renderer and animated backgrounds
+│   ├── __init__.py  Public idle API used by app.py and inputs.py
+│   ├── clock.py     Bouncing clock animator and font cycling
+│   ├── rain.py      Rain background
+│   ├── icosahedron.py  Wireframe icosahedron background
+│   ├── starfield.py Starfield background
+│   └── tesseract.py 4D tesseract background
+├── tests/           Unit tests for helper modules
+│   ├── test_time_helpers.py
+│   └── test_direction_helpers.py
 └── dog_log.json     Event log (created automatically)
  
 ```
@@ -122,11 +133,17 @@ app.py
  │    ├── state
  │    ├── helpers
  │    └── weather
- ├── idle        (animation)
- │    └── hardware
+ ├── idle        (idle renderer package)
+ │    ├── hardware
+ │    ├── idle.clock
+ │    ├── idle.rain
+ │    ├── idle.icosahedron
+ │    ├── idle.starfield
+ │    └── idle.tesseract
  └── inputs      (button wiring)
       ├── hardware
+  ├── idle
       └── screens
 ```
 
-No circular imports. `hardware.py` is the “leaf” — it only depends on external libraries.
+No circular imports. `hardware.py`, `state.py`, `weather.py`, and `helpers/` are leaf modules; `screens.py`, `idle/`, and `inputs.py` build on top of them.
