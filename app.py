@@ -36,7 +36,7 @@ try:
 
         if ui.mode == MODE_IDLE:
             render_idle_frame()
-            time.sleep(0.01) # smoother animation
+            # no sleep for smoother animation
         elif ui.mode == MODE_STATUS:
             render_lines(status_lines(), font=SCREEN_FONT)
             time.sleep(0.10)

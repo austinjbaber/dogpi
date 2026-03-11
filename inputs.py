@@ -3,6 +3,7 @@
 import time
 
 from hardware import BTN_UP, BTN_DOWN, BTN_SEL, device, SCREEN_FONT
+from idle import _cycle_font, _cycle_background
 from screens import (
     ui,
     MODE_IDLE, MODE_STATUS, MODE_MENU, MODE_WHEN, MODE_WEATHER, MODE_FORECAST,
@@ -12,7 +13,7 @@ from screens import (
 
 
 def _register_input_and_maybe_wake():
-    """Mark activity; return True if the press was consumed just to wake from idle."""
+    """Mark activity; return True if the select button was consumed just to wake from idle."""
     ui.last_input_t = time.monotonic()
     if ui.mode == MODE_IDLE:
         ui.mode = MODE_STATUS
@@ -21,6 +22,10 @@ def _register_input_and_maybe_wake():
 
 
 def on_up():
+    if ui.mode == MODE_IDLE:
+        _cycle_background()
+        return
+
     if _register_input_and_maybe_wake():
         return
 
@@ -53,6 +58,10 @@ def on_up():
 
 
 def on_down():
+    if ui.mode == MODE_IDLE:
+        _cycle_font()
+        return
+
     if _register_input_and_maybe_wake():
         return
 
@@ -88,6 +97,16 @@ def on_sel():
     # Ignore the release if the button was held (hold = cancel)
     if ui.sel_was_held:
         ui.sel_was_held = False
+        return
+
+    # select is the *only* button that wakes the display from idle.  when
+    # we detect an idle press we skip the normal wake helper and return the
+    # UI to the status screen (the caller may press SEL again to enter the
+    # menu).  this keeps behaviour consistent with the other buttons which
+    # also wake to status.
+    if ui.mode == MODE_IDLE:
+        ui.last_input_t = time.monotonic()
+        ui.mode = MODE_STATUS
         return
 
     if _register_input_and_maybe_wake():
