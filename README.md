@@ -51,16 +51,16 @@ DogPi has 6 modes:
 - **Weather**: current conditions (scrollable)
 - **Forecast**: short hourly forecast (scrollable)
 
-### Button controls (UP--SELECT--DOWN)
+### Button controls (UP / SELECT / DOWN)
 
 | Screen | UP | SEL | DOWN |
 |---|---|---|---|
 | **Idle** | Cycle Background | Wake to Status | Cycle Font |
 | **Status** | — | Open Menu | — |
 | **Menu** | Scroll Up | Choose | Scroll Down|
-| **When** | Increment | Next/ Confirm | Decrement |
+| **When** | Increment | Next / Confirm | Decrement |
 | **Weather** | Scroll Up | — | Scroll Down |
-| **Forecast** | Scroll Up | — | Scroll Dowm |
+| **Forecast** | Scroll Up | — | Scroll Down |
 
 **Hold SELECT (0.6s)** for “back/cancel”:
 
@@ -80,8 +80,8 @@ Behavior:
 
 - Refreshes at most every **10 minutes** (`WEATHER_REFRESH_S`)
 - Shows cached data for up to **2 hours** (`WEATHER_MAX_STALE_S`)
-- Status screen shows **ambient temp** from Open-Meteo when available; otherwise falls back to **CPU temp**
-- Forecast keeps the next **12 hours** (`HOURLY_HOURS`) and displays a compact WMO condition abbreviation
+- Status screen shows **current temp** from Open-Meteo when available; otherwise falls back to **CPU temp**
+- Forecast keeps the next **24 hours** (`HOURLY_HOURS`) and displays a compact WMO condition abbreviation
 
 ## Data
 
@@ -142,7 +142,7 @@ app.py
  │    └── idle.tesseract
  └── inputs      (button wiring)
       ├── hardware
-  ├── idle
+      ├── idle
       └── screens
 ```
 
