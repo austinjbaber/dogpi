@@ -31,6 +31,7 @@ class StarfieldBackground:
         self.stars = [self._new_star() for _ in range(self.num_stars)]
 
     def _new_star(self):
+        # Sample a point in a centered disk (x/y) plus a depth z for pseudo-3D projection.
         angle = self.rng.uniform(0.0, 2.0 * math.pi)
         radius = self.rng.uniform(0.2, 1.0)
         return [
@@ -39,9 +40,8 @@ class StarfieldBackground:
             self.rng.uniform(self.max_depth * 0.5, self.max_depth),
         ]
 
-    def update_and_draw(self, draw, step, vp_x, vp_y):
-        dt = step / 40.0
-
+    def update_and_draw(self, draw, dt, vp_x, vp_y):
+        # Oscillate star speed for a surging warp effect.
         self.speed += self.speed_drift * self.speed_dir * dt
         if self.speed > self.speed_max:
             self.speed = self.speed_max
@@ -58,6 +58,8 @@ class StarfieldBackground:
                 star[:] = self._new_star()
                 continue
 
+            # Project from 3D-ish local coordinates into 2D using the current vanishing point.
+            # vp_x/vp_y comes from the moving clock, so stars visually converge toward it.
             factor = self.max_depth / star[2]
             sx = int(vp_x + star[0] * factor)
             sy = int(vp_y + star[1] * factor)
@@ -70,6 +72,7 @@ class StarfieldBackground:
                 star[:] = self._new_star()
                 continue
 
+            # Draw a streak from previous projected position to current for motion blur.
             draw.line((sx_old, sy_old, sx, sy), fill=255)
 
             if star[2] < self.max_depth * 0.3:

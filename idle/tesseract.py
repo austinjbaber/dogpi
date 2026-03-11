@@ -9,8 +9,8 @@ class TesseractBackground:
         width,
         height,
         rng,
-        camera_z=5.0,
-        scale=32.0,
+        camera_z=7.0,
+        scale=36.0,
         margin=24,
         rot_x_spd=0.45,
         rot_y_spd=0.70,
@@ -52,6 +52,7 @@ class TesseractBackground:
         ]
 
         base_cube = self._normalize_vertices(cube_verts)
+        # A smaller, concentric cube plus connector edges makes a tesseract wireframe.
         inner_scale = 0.5
         inner_cube = [(x * inner_scale, y * inner_scale, z * inner_scale) for x, y, z in base_cube]
 
@@ -59,6 +60,7 @@ class TesseractBackground:
         self.edges = cube_edges + [(a + 8, b + 8) for a, b in cube_edges] + [(i, i + 8) for i in range(8)]
 
     def _normalize_vertices(self, verts):
+        # Normalize to a unit-radius shape so scale/camera settings behave consistently.
         max_r = max(math.sqrt(x * x + y * y + z * z) for x, y, z in verts)
         return [(x / max_r, y / max_r, z / max_r) for x, y, z in verts]
 
@@ -69,6 +71,7 @@ class TesseractBackground:
 
         out = []
         for x, y, z in self.vertices:
+            # Euler rotation sequence X -> Y -> Z for a stable tumbling wireframe.
             y, z = y * cx - z * sx, y * sx + z * cx
             x, z = x * cy + z * sy, -x * sy + z * cy
             x, y = x * cz - y * sz, x * sz + y * cz
@@ -78,15 +81,14 @@ class TesseractBackground:
     def _project(self, verts):
         points = []
         for x, y, z in verts:
+            # Perspective projection: nearer points (smaller camera_z + z) appear larger.
             factor = self.camera_z / (self.camera_z + z)
             px = int(self.cx + x * self.scale * factor)
             py = int(self.cy + y * self.scale * factor)
             points.append((px, py))
         return points
 
-    def update_and_draw(self, draw, step):
-        dt = step / 40.0
-
+    def update_and_draw(self, draw, dt):
         self.ax += self.rot_x_spd * dt
         self.ay += self.rot_y_spd * dt
         self.az += self.rot_z_spd * dt
@@ -94,6 +96,7 @@ class TesseractBackground:
         self.cx += self.vx * dt
         self.cy += self.vy * dt
 
+        # Bounce the model center inside a safety margin so geometry stays on-screen.
         if self.cx < self.margin:
             self.cx = self.margin
             self.vx = abs(self.vx)
