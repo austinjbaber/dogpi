@@ -12,24 +12,34 @@ from screens import (
 )
 
 
-def _register_input_and_maybe_wake():
-    """Mark activity; return True if the select button was consumed just to wake from idle."""
+def _note_input():
+    """Reset the inactivity timer for any button interaction."""
     ui.last_input_t = time.monotonic()
-    if ui.mode == MODE_IDLE:
-        ui.mode = MODE_STATUS
-        return True
-    return False
+
+
+def _scroll_offset(lines, current_offset, delta):
+    """Clamp a scroll offset to the visible line window for the current font."""
+    bbox = SCREEN_FONT.getbbox("Ag") # use a typical character to get line height
+    font_h = bbox[3] - bbox[1]
+    line_h = font_h + 1
+    max_lines = device.height // line_h
+    max_scroll = max(0, len(lines) - max_lines)
+    return max(0, min(current_offset + delta, max_scroll))
+
+
+def _menu_index_for(action_type):
+    """Return the menu index for an action type, defaulting to the first item."""
+    return next((i for i, (_, action) in enumerate(menu) if action.get("type") == action_type), 0)
 
 
 def on_up():
+    _note_input()
+
     if ui.mode == MODE_IDLE:
         _cycle_background()
         return
 
-    if _register_input_and_maybe_wake():
-        return
-
-    if ui.mode == MODE_MENU:
+    if ui.mode == MODE_MENU: # scroll up
         ui.menu_idx = (ui.menu_idx - 1) % len(menu)
 
     elif ui.mode == MODE_WHEN:
@@ -39,33 +49,20 @@ def on_up():
             ui.when_min_idx = (ui.when_min_idx + 1) % len(MINUTES_OPTIONS)
 
     elif ui.mode == MODE_WEATHER:
-        lines = weather_lines()
-        bbox = SCREEN_FONT.getbbox("Ag")
-        font_h = bbox[3] - bbox[1]
-        line_h = font_h + 1
-        max_lines = device.height // line_h
-        max_scroll = max(0, len(lines) - max_lines)
-        ui.weather_scroll = max(0, min(ui.weather_scroll - 1, max_scroll))
+        ui.weather_scroll = _scroll_offset(weather_lines(), ui.weather_scroll, -1) # scroll up
 
     elif ui.mode == MODE_FORECAST:
-        lines = forecast_lines()
-        bbox = SCREEN_FONT.getbbox("Ag")
-        font_h = bbox[3] - bbox[1]
-        line_h = font_h + 1
-        max_lines = device.height // line_h
-        max_scroll = max(0, len(lines) - max_lines)
-        ui.forecast_scroll = max(0, min(ui.forecast_scroll - 1, max_scroll))
+        ui.forecast_scroll = _scroll_offset(forecast_lines(), ui.forecast_scroll, -1) # scroll up
 
 
 def on_down():
+    _note_input()
+
     if ui.mode == MODE_IDLE:
         _cycle_font()
         return
 
-    if _register_input_and_maybe_wake():
-        return
-
-    if ui.mode == MODE_MENU:
+    if ui.mode == MODE_MENU: # scroll down
         ui.menu_idx = (ui.menu_idx + 1) % len(menu)
 
     elif ui.mode == MODE_WHEN:
@@ -75,41 +72,22 @@ def on_down():
             ui.when_min_idx = (ui.when_min_idx - 1) % len(MINUTES_OPTIONS)
 
     elif ui.mode == MODE_WEATHER:
-        lines = weather_lines()
-        bbox = SCREEN_FONT.getbbox("Ag")
-        font_h = bbox[3] - bbox[1]
-        line_h = font_h + 1
-        max_lines = device.height // line_h
-        max_scroll = max(0, len(lines) - max_lines)
-        ui.weather_scroll = min(max_scroll, ui.weather_scroll + 1)
+        ui.weather_scroll = _scroll_offset(weather_lines(), ui.weather_scroll, 1) # scroll down
 
     elif ui.mode == MODE_FORECAST:
-        lines = forecast_lines()
-        bbox = SCREEN_FONT.getbbox("Ag")
-        font_h = bbox[3] - bbox[1]
-        line_h = font_h + 1
-        max_lines = device.height // line_h
-        max_scroll = max(0, len(lines) - max_lines)
-        ui.forecast_scroll = min(max_scroll, ui.forecast_scroll + 1)
+        ui.forecast_scroll = _scroll_offset(forecast_lines(), ui.forecast_scroll, 1) # scroll down
 
 
 def on_sel():
-    # Ignore the release if the button was held (hold = cancel)
+    # gpiozero fires both held and released for a long press, release must be ignored if sel_held_handler ran
     if ui.sel_was_held:
         ui.sel_was_held = False
         return
 
-    # select is the *only* button that wakes the display from idle.  when
-    # we detect an idle press we skip the normal wake helper and return the
-    # UI to the status screen (the caller may press SEL again to enter the
-    # menu).  this keeps behaviour consistent with the other buttons which
-    # also wake to status.
-    if ui.mode == MODE_IDLE:
-        ui.last_input_t = time.monotonic()
-        ui.mode = MODE_STATUS
-        return
+    _note_input()
 
-    if _register_input_and_maybe_wake():
+    if ui.mode == MODE_IDLE:
+        ui.mode = MODE_STATUS
         return
 
     if ui.mode == MODE_STATUS:
@@ -128,6 +106,7 @@ def on_sel():
 
 
 def _sel_held_handler():
+    _note_input()
     ui.sel_was_held = True
 
     # Hold SEL on Status -> go back to idle
@@ -142,27 +121,24 @@ def _sel_held_handler():
         ui.mode = MODE_STATUS
         return
 
-    # Hold SEL on When -> cancel and return to Status
+    # Hold SEL on When -> cancel and return to Menu
     if ui.mode == MODE_WHEN:
         show_toast(["Canceled", "Back to menu..."])
         ui.pending_log_value = None
-        ui.mode = MODE_STATUS
+        ui.mode = MODE_MENU
         return
 
     # Hold SEL on Weather -> back to menu
     if ui.mode == MODE_WEATHER:
         show_toast("Back to menu...")
-        # select the "Weather" menu item if present
-        idx = next((i for i, (_, a) in enumerate(menu) if a.get("type") == "weather"), 0)
-        ui.menu_idx = idx
+        ui.menu_idx = _menu_index_for("weather")
         ui.mode = MODE_MENU
         return
 
     # Hold SEL on Forecast -> back to menu
     if ui.mode == MODE_FORECAST:
         show_toast("Back to menu...")
-        idx = next((i for i, (_, a) in enumerate(menu) if a.get("type") == "forecast"), 0)
-        ui.menu_idx = idx
+        ui.menu_idx = _menu_index_for("forecast")
         ui.mode = MODE_MENU
         return
 
@@ -175,4 +151,3 @@ BTN_DOWN.when_pressed  = on_down
 BTN_SEL.hold_time      = 0.6
 BTN_SEL.when_held      = _sel_held_handler
 BTN_SEL.when_released  = on_sel
-
