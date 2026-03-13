@@ -35,7 +35,6 @@ class RainV2Background:
         self.lightning_flash_time = 0.0
         self.next_lightning_in = self.rng.uniform(9.0, 18.0)
         self.lightning_segments = []
-        self.lightning_branch_segments = []
 
         self.frame_index = 0
         self.splashes = []
@@ -107,22 +106,8 @@ class RainV2Background:
         )
         self.lightning_segments = self._points_to_segments(main_points)
 
-        self.lightning_branch_segments = []
-        if len(main_points) >= 4:
-            branch_origin = self.rng.randint(1, len(main_points) - 2)
-            bx, by = main_points[branch_origin]
-            branch_points = self._build_lightning_path(
-                start_x=bx,
-                start_y=by,
-                max_height=min(self.height - 6, by + self.rng.randint(10, 22)),
-                horizontal_step=7,
-                vertical_step=7,
-            )
-            if len(branch_points) >= 2:
-                self.lightning_branch_segments = self._points_to_segments(branch_points)
-
-        self.lightning_time_left = self.rng.uniform(0.10, 0.18)
-        self.lightning_flash_time = self.rng.uniform(0.14, 0.24)
+        self.lightning_time_left = self.rng.uniform(0.22, 0.40)
+        self.lightning_flash_time = self.rng.uniform(0.20, 0.34)
         self.next_lightning_in = self.rng.uniform(12.0, 24.0)
 
     def _update_lightning(self, dt):
@@ -130,7 +115,6 @@ class RainV2Background:
             self.lightning_time_left = max(0.0, self.lightning_time_left - dt)
         else:
             self.lightning_segments = []
-            self.lightning_branch_segments = []
 
         if self.lightning_flash_time > 0.0:
             self.lightning_flash_time = max(0.0, self.lightning_flash_time - dt)
@@ -151,9 +135,8 @@ class RainV2Background:
             draw.line((x0, y0, x1, y1), fill=255)
             if x0 + 1 < self.width and x1 + 1 < self.width:
                 draw.line((x0 + 1, y0, x1 + 1, y1), fill=255)
-
-        for (x0, y0), (x1, y1) in self.lightning_branch_segments:
-            draw.line((x0, y0, x1, y1), fill=255)
+            if x0 - 1 >= 0 and x1 - 1 >= 0:
+                draw.line((x0 - 1, y0, x1 - 1, y1), fill=255)
 
     def update_and_draw(self, draw, dt):
         self.frame_index += 1
