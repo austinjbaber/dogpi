@@ -34,8 +34,8 @@ class RainV2Background:
         self.lightning_time_left = 0.0
         self.lightning_flash_time = 0.0
         self.lightning_afterglow_time = 0.0
-        self.next_lightning_in = self.rng.uniform(9.0, 18.0)
-        self.lightning_segments = []
+        self.next_lightning_in = self.rng.uniform(7.0, 14.0)
+        self.lightning_bolts = []
 
         self.frame_index = 0
         self.splashes = []
@@ -96,20 +96,25 @@ class RainV2Background:
         return list(zip(points, points[1:]))
 
     def _start_lightning(self):
-        start_x = self.rng.randint(self.width // 5, (self.width * 4) // 5)
-        main_points = self._build_lightning_path(
-            start_x=start_x,
-            start_y=0,
-            max_height=self.height - 1,
-            horizontal_step=8,
-            vertical_step=10,
-        )
-        self.lightning_segments = self._points_to_segments(main_points)
+        start_x = self.rng.randint(self.width // 4, (self.width * 3) // 4)
+        second_start_x = start_x + self.rng.randint(-26, 26)
+        second_start_x = max(6, min(self.width - 7, second_start_x))
+
+        self.lightning_bolts = []
+        for bolt_start_x in (start_x, second_start_x):
+            main_points = self._build_lightning_path(
+                start_x=bolt_start_x,
+                start_y=0,
+                max_height=self.height - 1,
+                horizontal_step=8,
+                vertical_step=10,
+            )
+            self.lightning_bolts.append(self._points_to_segments(main_points))
 
         self.lightning_time_left = self.rng.uniform(0.30, 0.50)
         self.lightning_flash_time = self.rng.uniform(0.26, 0.40)
         self.lightning_afterglow_time = self.rng.uniform(0.12, 0.22)
-        self.next_lightning_in = self.rng.uniform(12.0, 24.0)
+        self.next_lightning_in = self.rng.uniform(9.0, 16.0)
 
     def _update_lightning(self, dt):
         if self.lightning_time_left > 0.0:
@@ -117,7 +122,7 @@ class RainV2Background:
         elif self.lightning_afterglow_time > 0.0:
             self.lightning_afterglow_time = max(0.0, self.lightning_afterglow_time - dt)
         else:
-            self.lightning_segments = []
+            self.lightning_bolts = []
 
         if self.lightning_flash_time > 0.0:
             self.lightning_flash_time = max(0.0, self.lightning_flash_time - dt)
@@ -139,16 +144,18 @@ class RainV2Background:
             return
 
         if self.lightning_time_left > 0.0:
-            for (x0, y0), (x1, y1) in self.lightning_segments:
-                draw.line((x0, y0, x1, y1), fill=255)
-                if x0 + 1 < self.width and x1 + 1 < self.width:
-                    draw.line((x0 + 1, y0, x1 + 1, y1), fill=255)
-                if x0 - 1 >= 0 and x1 - 1 >= 0:
-                    draw.line((x0 - 1, y0, x1 - 1, y1), fill=255)
-        else:
-            for index, ((x0, y0), (x1, y1)) in enumerate(self.lightning_segments):
-                if index % 2 == 0:
+            for bolt_segments in self.lightning_bolts:
+                for (x0, y0), (x1, y1) in bolt_segments:
                     draw.line((x0, y0, x1, y1), fill=255)
+                    if x0 + 1 < self.width and x1 + 1 < self.width:
+                        draw.line((x0 + 1, y0, x1 + 1, y1), fill=255)
+                    if x0 - 1 >= 0 and x1 - 1 >= 0:
+                        draw.line((x0 - 1, y0, x1 - 1, y1), fill=255)
+        else:
+            for bolt_segments in self.lightning_bolts:
+                for index, ((x0, y0), (x1, y1)) in enumerate(bolt_segments):
+                    if index % 2 == 0:
+                        draw.line((x0, y0, x1, y1), fill=255)
 
     def update_and_draw(self, draw, dt):
         self.frame_index += 1
