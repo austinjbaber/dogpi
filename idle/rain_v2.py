@@ -15,7 +15,6 @@ class RainV2Background:
         near_len=(10, 18),
         far_spd=(42.0, 96.0),
         near_spd=(130.0, 230.0),
-        foreground_near_ratio=0.45,
     ):
         self.width = width
         self.height = height
@@ -27,19 +26,15 @@ class RainV2Background:
         self.near_len = near_len
         self.far_spd = far_spd
         self.near_spd = near_spd
-        self.foreground_near_ratio = foreground_near_ratio
 
         self.base_wind = self.rng.uniform(-3.0, 3.0)
         self.gust_wind = 0.0
-        self.gust_speed_boost = 0.0
         self.gust_time_left = 0.0
         self.next_gust_in = self.rng.uniform(1.4, 2.8)
 
         self.frame_index = 0
         self.splashes = []
         self.drops = []
-        self._foreground_segments = []
-        self._foreground_splashes = []
 
         for _ in range(self.far_count):
             self.drops.append(self._spawn_drop(layer="far", y_range=(-self.height, self.height)))
@@ -67,7 +62,6 @@ class RainV2Background:
             "spd": speed,
             "vx": vx,
             "phase": phase,
-            "front": (layer == "near" and self.rng.random() < self.foreground_near_ratio),
         }
 
     def _update_gust(self, dt):
@@ -75,25 +69,23 @@ class RainV2Background:
         if self.next_gust_in <= 0.0:
             self.gust_time_left = self.rng.uniform(0.8, 1.8)
             self.gust_wind = self.rng.uniform(-28.0, 28.0)
-            self.gust_speed_boost = self.rng.uniform(0.9, 1.8)
             self.next_gust_in = self.rng.uniform(1.6, 3.4)
 
         active = self.gust_time_left > 0.0
         if active:
             self.gust_time_left = max(0.0, self.gust_time_left - dt)
 
-        speed_mult = 1.0 + (self.gust_speed_boost if active else 0.0)
         wind = self.base_wind + (self.gust_wind if active else 0.0)
-        return speed_mult, wind
+        return wind
 
     def update_and_draw(self, draw, dt):
         self.frame_index += 1
-        speed_mult, wind = self._update_gust(dt)
-        self._foreground_segments = []
+        wind = self._update_gust(dt)
 
         for drop in self.drops:
-            drop["y"] += drop["spd"] * speed_mult * dt
-            drop["x"] += (drop["vx"] + wind) * dt
+            horizontal_v = drop["vx"] + wind
+            drop["y"] += drop["spd"] * dt
+            drop["x"] += horizontal_v * dt
 
             # Wrap sideways so wind does not starve one side of the screen.
             if drop["x"] < 0.0:
@@ -117,24 +109,21 @@ class RainV2Background:
                 drop["spd"] = refreshed["spd"]
                 drop["vx"] = refreshed["vx"]
                 drop["phase"] = refreshed["phase"]
-                drop["front"] = refreshed["front"]
 
             x = int(round(drop["x"]))
             y1 = int(round(drop["y"]))
             seg_len = drop["len"] if drop["layer"] == "near" else max(1, drop["len"] - 1)
             y0 = y1 - seg_len
+            slant = int(round((horizontal_v / max(drop["spd"], 1.0)) * seg_len * 1.35))
+            x0 = x - slant
 
             # Far-layer drops are drawn every other frame to simulate dimmer depth.
             if drop["layer"] == "far" and ((self.frame_index + drop["phase"]) % 2 != 0):
                 continue
 
-            if drop["front"]:
-                self._foreground_segments.append((x, y0, x, y1))
-            else:
-                draw.line((x, y0, x, y1), fill=255)
+            draw.line((x0, y0, x, y1), fill=255)
 
         next_splashes = []
-        self._foreground_splashes = []
         for splash in self.splashes:
             splash["ttl"] -= dt
             if splash["ttl"] <= 0.0:
@@ -145,13 +134,7 @@ class RainV2Background:
             half_w = splash["half_w"]
             x0 = max(0, x - half_w)
             x1 = min(self.width - 1, x + half_w)
-            self._foreground_splashes.append((x0, y, x1, y))
+            draw.line((x0, y, x1, y), fill=255)
             next_splashes.append(splash)
 
         self.splashes = next_splashes
-
-    def draw_foreground(self, draw):
-        for x0, y0, x1, y1 in self._foreground_segments:
-            draw.line((x0, y0, x1, y1), fill=255)
-        for x0, y0, x1, y1 in self._foreground_splashes:
-            draw.line((x0, y0, x1, y1), fill=255)
