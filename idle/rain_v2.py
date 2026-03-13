@@ -1,8 +1,6 @@
 """Rain v2 background animation for idle mode.
 
-Adds subtle wind drift, layered depth, and occasional gust pulses while
-keeping the original rain implementation untouched.
-"""
+Adds subtle wind drift, layered depth, and occasional gust"""
 
 
 class RainV2Background:

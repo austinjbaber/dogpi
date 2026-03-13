@@ -81,12 +81,12 @@ class TesseractBackground:
 
         out = []
         for x, y, z in self.vertices:
-            # Euler rotation sequence X -> Y -> Z for a stable tumbling wireframe.
+            # Euler rotation sequence X -> Y -> Z for a stable tumbling wireframe
             y, z = y * cx - z * sx, y * sx + z * cx
             x, z = x * cy + z * sy, -x * sy + z * cy
             x, y = x * cz - y * sz, x * sz + y * cz
 
-            # Apply a fixed camera tilt to keep perspective cues readable.
+            # Apply a fixed camera tilt to keep perspective readable
             y, z = y * self._tilt_cx - z * self._tilt_sx, y * self._tilt_sx + z * self._tilt_cx
             x, z = x * self._tilt_cy + z * self._tilt_sy, -x * self._tilt_sy + z * self._tilt_cy
             out.append((x, y, z))
@@ -95,9 +95,9 @@ class TesseractBackground:
     def _project(self, verts):
         points = []
         for x, y, z in verts:
-            # Perspective projection: nearer points (smaller camera_z + z) appear larger.
+            # make nearer points (smaller camera_z + z) appear larger
             denom = self.camera_z + (z * self.perspective_strength)
-            # Clamp denominator away from zero to avoid sudden projection spikes.
+            # Clamp denominator away from zero to avoid projection spikes
             denom = max(0.35, denom)
             factor = self.camera_z / denom
             px = self.cx + x * self.scale * factor

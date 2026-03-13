@@ -9,6 +9,7 @@ from hardware import device, W, H
 
 from .clock import ClockAnimator
 from .icosahedron import IcosahedronBackground
+from .rain import RainBackground
 from .rain_v2 import RainV2Background
 from .starfield import StarfieldBackground
 from .tesseract import TesseractBackground
@@ -31,10 +32,11 @@ _clock = ClockAnimator(
 )
 
 _backgrounds = [
-    ("rain", RainV2Background(width=W, height=H, rng=_rng)),
+    ("rain", RainBackground(width=W, height=H, rng=_rng)),
     ("icosahedron", IcosahedronBackground(width=W, height=H, rng=_rng)),
-    ("starfield", StarfieldBackground(width=W, height=H, rng=_rng)),
+    ("rainv2", RainV2Background(width=W, height=H, rng=_rng)),
     ("tesseract", TesseractBackground(width=W, height=H, rng=_rng)),
+    ("starfield", StarfieldBackground(width=W, height=H, rng=_rng))
 ]
 
 # Track the active background and frame timing for animation
