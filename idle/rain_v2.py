@@ -46,12 +46,10 @@ class RainV2Background:
         if layer == "far":
             length = self.rng.randint(self.far_len[0], self.far_len[1])
             speed = self.rng.uniform(self.far_spd[0], self.far_spd[1])
-            vx = self.rng.uniform(-3.5, 3.5)
             phase = self.rng.randrange(0, 2)
         else:
             length = self.rng.randint(self.near_len[0], self.near_len[1])
             speed = self.rng.uniform(self.near_spd[0], self.near_spd[1])
-            vx = self.rng.uniform(-10.0, 10.0)
             phase = 0
 
         return {
@@ -60,7 +58,6 @@ class RainV2Background:
             "y": self.rng.uniform(float(y0), float(y1)),
             "len": length,
             "spd": speed,
-            "vx": vx,
             "phase": phase,
         }
 
@@ -84,7 +81,7 @@ class RainV2Background:
         wind = self._update_gust(dt)
 
         for drop in self.drops:
-            horizontal_v = drop["vx"] + wind
+            horizontal_v = wind
             drop["y"] += drop["spd"] * dt
             drop["x"] += horizontal_v * dt
 
@@ -108,7 +105,6 @@ class RainV2Background:
                 drop["y"] = refreshed["y"]
                 drop["len"] = refreshed["len"]
                 drop["spd"] = refreshed["spd"]
-                drop["vx"] = refreshed["vx"]
                 drop["phase"] = refreshed["phase"]
 
             x = int(round(drop["x"]))
