@@ -11,10 +11,11 @@ class RainV2Background:
         rng,
         far_count=24,
         near_count=18,
-        far_len=(2, 5),
-        near_len=(5, 11),
-        far_spd=(28.0, 66.0),
-        near_spd=(72.0, 140.0),
+        far_len=(4, 8),
+        near_len=(10, 18),
+        far_spd=(42.0, 96.0),
+        near_spd=(130.0, 230.0),
+        foreground_near_ratio=0.45,
     ):
         self.width = width
         self.height = height
@@ -26,16 +27,19 @@ class RainV2Background:
         self.near_len = near_len
         self.far_spd = far_spd
         self.near_spd = near_spd
+        self.foreground_near_ratio = foreground_near_ratio
 
-        self.base_wind = self.rng.uniform(-6.0, 6.0)
+        self.base_wind = self.rng.uniform(-3.0, 3.0)
         self.gust_wind = 0.0
         self.gust_speed_boost = 0.0
         self.gust_time_left = 0.0
-        self.next_gust_in = self.rng.uniform(2.5, 5.5)
+        self.next_gust_in = self.rng.uniform(1.4, 2.8)
 
         self.frame_index = 0
         self.splashes = []
         self.drops = []
+        self._foreground_segments = []
+        self._foreground_splashes = []
 
         for _ in range(self.far_count):
             self.drops.append(self._spawn_drop(layer="far", y_range=(-self.height, self.height)))
@@ -52,7 +56,7 @@ class RainV2Background:
         else:
             length = self.rng.randint(self.near_len[0], self.near_len[1])
             speed = self.rng.uniform(self.near_spd[0], self.near_spd[1])
-            vx = self.rng.uniform(-6.0, 6.0)
+            vx = self.rng.uniform(-10.0, 10.0)
             phase = 0
 
         return {
@@ -63,15 +67,16 @@ class RainV2Background:
             "spd": speed,
             "vx": vx,
             "phase": phase,
+            "front": (layer == "near" and self.rng.random() < self.foreground_near_ratio),
         }
 
     def _update_gust(self, dt):
         self.next_gust_in -= dt
         if self.next_gust_in <= 0.0:
-            self.gust_time_left = self.rng.uniform(0.45, 1.1)
-            self.gust_wind = self.rng.uniform(-14.0, 14.0)
-            self.gust_speed_boost = self.rng.uniform(0.25, 0.75)
-            self.next_gust_in = self.rng.uniform(2.8, 6.0)
+            self.gust_time_left = self.rng.uniform(0.8, 1.8)
+            self.gust_wind = self.rng.uniform(-28.0, 28.0)
+            self.gust_speed_boost = self.rng.uniform(0.9, 1.8)
+            self.next_gust_in = self.rng.uniform(1.6, 3.4)
 
         active = self.gust_time_left > 0.0
         if active:
@@ -84,6 +89,7 @@ class RainV2Background:
     def update_and_draw(self, draw, dt):
         self.frame_index += 1
         speed_mult, wind = self._update_gust(dt)
+        self._foreground_segments = []
 
         for drop in self.drops:
             drop["y"] += drop["spd"] * speed_mult * dt
@@ -100,8 +106,8 @@ class RainV2Background:
                     self.splashes.append({
                         "x": int(round(drop["x"])),
                         "y": self.height - 1,
-                        "ttl": 0.055,
-                        "half_w": 1,
+                        "ttl": 0.085,
+                        "half_w": self.rng.randint(1, 2),
                     })
 
                 refreshed = self._spawn_drop(layer=drop["layer"], y_range=(-14, 0))
@@ -111,6 +117,7 @@ class RainV2Background:
                 drop["spd"] = refreshed["spd"]
                 drop["vx"] = refreshed["vx"]
                 drop["phase"] = refreshed["phase"]
+                drop["front"] = refreshed["front"]
 
             x = int(round(drop["x"]))
             y1 = int(round(drop["y"]))
@@ -121,9 +128,13 @@ class RainV2Background:
             if drop["layer"] == "far" and ((self.frame_index + drop["phase"]) % 2 != 0):
                 continue
 
-            draw.line((x, y0, x, y1), fill=255)
+            if drop["front"]:
+                self._foreground_segments.append((x, y0, x, y1))
+            else:
+                draw.line((x, y0, x, y1), fill=255)
 
         next_splashes = []
+        self._foreground_splashes = []
         for splash in self.splashes:
             splash["ttl"] -= dt
             if splash["ttl"] <= 0.0:
@@ -134,7 +145,13 @@ class RainV2Background:
             half_w = splash["half_w"]
             x0 = max(0, x - half_w)
             x1 = min(self.width - 1, x + half_w)
-            draw.line((x0, y, x1, y), fill=255)
+            self._foreground_splashes.append((x0, y, x1, y))
             next_splashes.append(splash)
 
         self.splashes = next_splashes
+
+    def draw_foreground(self, draw):
+        for x0, y0, x1, y1 in self._foreground_segments:
+            draw.line((x0, y0, x1, y1), fill=255)
+        for x0, y0, x1, y1 in self._foreground_splashes:
+            draw.line((x0, y0, x1, y1), fill=255)

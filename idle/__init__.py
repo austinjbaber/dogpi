@@ -81,6 +81,9 @@ def render_idle_frame():
         background.update_and_draw(draw, dt)
         _clock.update_position(dt, use_starfield_buffer=False)
         _clock.draw(draw, time_str)
+        if bg_name == "rainv2":
+            # Draw storm foreground after the clock so some drops pass in front.
+            background.draw_foreground(draw)
 
     device.display(img)
 
