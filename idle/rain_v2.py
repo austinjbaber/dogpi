@@ -31,6 +31,11 @@ class RainV2Background:
         self.gust_wind = 0.0
         self.gust_time_left = 0.0
         self.next_gust_in = self.rng.uniform(1.4, 2.8)
+        self.lightning_time_left = 0.0
+        self.lightning_flash_time = 0.0
+        self.next_lightning_in = self.rng.uniform(9.0, 18.0)
+        self.lightning_segments = []
+        self.lightning_branch_segments = []
 
         self.frame_index = 0
         self.splashes = []
@@ -76,9 +81,84 @@ class RainV2Background:
         wind = self.base_wind + (self.gust_wind if active else 0.0)
         return wind
 
+    def _build_lightning_path(self, start_x, start_y, max_height, horizontal_step, vertical_step):
+        points = [(start_x, start_y)]
+        x = start_x
+        y = start_y
+        while y < max_height:
+            x += self.rng.randint(-horizontal_step, horizontal_step)
+            x = max(2, min(self.width - 3, x))
+            y += self.rng.randint(max(5, vertical_step - 3), vertical_step + 4)
+            points.append((x, min(max_height, y)))
+        return points
+
+    def _points_to_segments(self, points):
+        return list(zip(points, points[1:]))
+
+    def _start_lightning(self):
+        start_x = self.rng.randint(self.width // 5, (self.width * 4) // 5)
+        max_height = self.rng.randint(self.height // 2, self.height - 10)
+        main_points = self._build_lightning_path(
+            start_x=start_x,
+            start_y=0,
+            max_height=max_height,
+            horizontal_step=8,
+            vertical_step=10,
+        )
+        self.lightning_segments = self._points_to_segments(main_points)
+
+        self.lightning_branch_segments = []
+        if len(main_points) >= 4:
+            branch_origin = self.rng.randint(1, len(main_points) - 2)
+            bx, by = main_points[branch_origin]
+            branch_points = self._build_lightning_path(
+                start_x=bx,
+                start_y=by,
+                max_height=min(self.height - 6, by + self.rng.randint(10, 22)),
+                horizontal_step=7,
+                vertical_step=7,
+            )
+            if len(branch_points) >= 2:
+                self.lightning_branch_segments = self._points_to_segments(branch_points)
+
+        self.lightning_time_left = self.rng.uniform(0.10, 0.18)
+        self.lightning_flash_time = self.rng.uniform(0.14, 0.24)
+        self.next_lightning_in = self.rng.uniform(12.0, 24.0)
+
+    def _update_lightning(self, dt):
+        if self.lightning_time_left > 0.0:
+            self.lightning_time_left = max(0.0, self.lightning_time_left - dt)
+        else:
+            self.lightning_segments = []
+            self.lightning_branch_segments = []
+
+        if self.lightning_flash_time > 0.0:
+            self.lightning_flash_time = max(0.0, self.lightning_flash_time - dt)
+
+        self.next_lightning_in -= dt
+        if self.next_lightning_in <= 0.0 and self.lightning_flash_time <= 0.0:
+            self._start_lightning()
+
+    def _draw_lightning(self, draw):
+        if self.lightning_flash_time > 0.0:
+            flash_h = self.rng.randint(10, 18)
+            draw.rectangle((0, 0, self.width - 1, flash_h), outline=255, fill=255)
+
+        if self.lightning_time_left <= 0.0:
+            return
+
+        for (x0, y0), (x1, y1) in self.lightning_segments:
+            draw.line((x0, y0, x1, y1), fill=255)
+            if x0 + 1 < self.width and x1 + 1 < self.width:
+                draw.line((x0 + 1, y0, x1 + 1, y1), fill=255)
+
+        for (x0, y0), (x1, y1) in self.lightning_branch_segments:
+            draw.line((x0, y0, x1, y1), fill=255)
+
     def update_and_draw(self, draw, dt):
         self.frame_index += 1
         wind = self._update_gust(dt)
+        self._update_lightning(dt)
 
         for drop in self.drops:
             horizontal_v = wind
@@ -135,3 +215,4 @@ class RainV2Background:
             next_splashes.append(splash)
 
         self.splashes = next_splashes
+        self._draw_lightning(draw)
