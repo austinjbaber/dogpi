@@ -33,6 +33,7 @@ class RainV2Background:
         self.next_gust_in = self.rng.uniform(1.4, 2.8)
         self.lightning_time_left = 0.0
         self.lightning_flash_time = 0.0
+        self.lightning_afterglow_time = 0.0
         self.next_lightning_in = self.rng.uniform(9.0, 18.0)
         self.lightning_segments = []
 
@@ -96,23 +97,25 @@ class RainV2Background:
 
     def _start_lightning(self):
         start_x = self.rng.randint(self.width // 5, (self.width * 4) // 5)
-        max_height = self.rng.randint(self.height // 2, self.height - 10)
         main_points = self._build_lightning_path(
             start_x=start_x,
             start_y=0,
-            max_height=max_height,
+            max_height=self.height - 1,
             horizontal_step=8,
             vertical_step=10,
         )
         self.lightning_segments = self._points_to_segments(main_points)
 
-        self.lightning_time_left = self.rng.uniform(0.22, 0.40)
-        self.lightning_flash_time = self.rng.uniform(0.20, 0.34)
+        self.lightning_time_left = self.rng.uniform(0.30, 0.50)
+        self.lightning_flash_time = self.rng.uniform(0.26, 0.40)
+        self.lightning_afterglow_time = self.rng.uniform(0.12, 0.22)
         self.next_lightning_in = self.rng.uniform(12.0, 24.0)
 
     def _update_lightning(self, dt):
         if self.lightning_time_left > 0.0:
             self.lightning_time_left = max(0.0, self.lightning_time_left - dt)
+        elif self.lightning_afterglow_time > 0.0:
+            self.lightning_afterglow_time = max(0.0, self.lightning_afterglow_time - dt)
         else:
             self.lightning_segments = []
 
@@ -127,16 +130,25 @@ class RainV2Background:
         if self.lightning_flash_time > 0.0:
             flash_h = self.rng.randint(10, 18)
             draw.rectangle((0, 0, self.width - 1, flash_h), outline=255, fill=255)
+        elif self.lightning_afterglow_time > 0.0:
+            flash_h = self.rng.randint(8, 14)
+            for y in range(0, flash_h, 2):
+                draw.line((0, y, self.width - 1, y), fill=255)
 
-        if self.lightning_time_left <= 0.0:
+        if self.lightning_time_left <= 0.0 and self.lightning_afterglow_time <= 0.0:
             return
 
-        for (x0, y0), (x1, y1) in self.lightning_segments:
-            draw.line((x0, y0, x1, y1), fill=255)
-            if x0 + 1 < self.width and x1 + 1 < self.width:
-                draw.line((x0 + 1, y0, x1 + 1, y1), fill=255)
-            if x0 - 1 >= 0 and x1 - 1 >= 0:
-                draw.line((x0 - 1, y0, x1 - 1, y1), fill=255)
+        if self.lightning_time_left > 0.0:
+            for (x0, y0), (x1, y1) in self.lightning_segments:
+                draw.line((x0, y0, x1, y1), fill=255)
+                if x0 + 1 < self.width and x1 + 1 < self.width:
+                    draw.line((x0 + 1, y0, x1 + 1, y1), fill=255)
+                if x0 - 1 >= 0 and x1 - 1 >= 0:
+                    draw.line((x0 - 1, y0, x1 - 1, y1), fill=255)
+        else:
+            for index, ((x0, y0), (x1, y1)) in enumerate(self.lightning_segments):
+                if index % 2 == 0:
+                    draw.line((x0, y0, x1, y1), fill=255)
 
     def update_and_draw(self, draw, dt):
         self.frame_index += 1
