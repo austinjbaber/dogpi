@@ -13,8 +13,8 @@ class RainV2Background:
         near_count=18,
         far_len=(4, 8),
         near_len=(10, 18),
-        far_spd=(42.0, 96.0),
-        near_spd=(130.0, 230.0),
+        far_spd=(30.0, 60.0),
+        near_spd=(90.0, 150.0),
     ):
         self.width = width
         self.height = height
@@ -27,7 +27,7 @@ class RainV2Background:
         self.far_spd = far_spd
         self.near_spd = near_spd
 
-        self.base_wind = self.rng.uniform(-3.0, 3.0)
+        self.base_wind = self.rng.uniform(-2.0, 2.0)
         self.gust_wind = 0.0
         self.gust_time_left = 0.0
         self.next_gust_in = self.rng.uniform(1.4, 2.8)
