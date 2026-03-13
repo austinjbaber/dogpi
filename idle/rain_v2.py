@@ -67,9 +67,10 @@ class RainV2Background:
     def _update_gust(self, dt):
         self.next_gust_in -= dt
         if self.next_gust_in <= 0.0:
-            self.gust_time_left = self.rng.uniform(0.8, 1.8)
-            self.gust_wind = self.rng.uniform(-28.0, 28.0)
-            self.next_gust_in = self.rng.uniform(1.6, 3.4)
+            self.gust_time_left = self.rng.uniform(1.5, 3.0)
+            gust_mag = self.rng.uniform(20.0, 30.0)
+            self.gust_wind = gust_mag * self.rng.choice((-1.0, 1.0))
+            self.next_gust_in = self.rng.uniform(4, 6)
 
         active = self.gust_time_left > 0.0
         if active:
