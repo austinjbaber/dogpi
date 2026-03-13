@@ -15,6 +15,9 @@ class TesseractBackground:
         rot_x_spd=0.45,
         rot_y_spd=0.70,
         rot_z_spd=0.25,
+        perspective_strength=1.9,
+        view_tilt_x=0.30,
+        view_tilt_y=-0.22,
     ):
         self.width = width
         self.height = height
@@ -26,6 +29,13 @@ class TesseractBackground:
         self.rot_x_spd = rot_x_spd
         self.rot_y_spd = rot_y_spd
         self.rot_z_spd = rot_z_spd
+        self.perspective_strength = perspective_strength
+
+        # Keep a slight fixed camera cant so the wireframe avoids flat head-on views.
+        self._tilt_sx = math.sin(view_tilt_x)
+        self._tilt_cx = math.cos(view_tilt_x)
+        self._tilt_sy = math.sin(view_tilt_y)
+        self._tilt_cy = math.cos(view_tilt_y)
 
         self.ax = 0.0
         self.ay = 0.0
@@ -75,6 +85,10 @@ class TesseractBackground:
             y, z = y * cx - z * sx, y * sx + z * cx
             x, z = x * cy + z * sy, -x * sy + z * cy
             x, y = x * cz - y * sz, x * sz + y * cz
+
+            # Apply a fixed camera tilt to keep perspective cues readable.
+            y, z = y * self._tilt_cx - z * self._tilt_sx, y * self._tilt_sx + z * self._tilt_cx
+            x, z = x * self._tilt_cy + z * self._tilt_sy, -x * self._tilt_sy + z * self._tilt_cy
             out.append((x, y, z))
         return out
 
@@ -82,9 +96,12 @@ class TesseractBackground:
         points = []
         for x, y, z in verts:
             # Perspective projection: nearer points (smaller camera_z + z) appear larger.
-            factor = self.camera_z / (self.camera_z + z)
-            px = int(self.cx + x * self.scale * factor)
-            py = int(self.cy + y * self.scale * factor)
+            denom = self.camera_z + (z * self.perspective_strength)
+            # Clamp denominator away from zero to avoid sudden projection spikes.
+            denom = max(0.35, denom)
+            factor = self.camera_z / denom
+            px = self.cx + x * self.scale * factor
+            py = self.cy + y * self.scale * factor
             points.append((px, py))
         return points
 
@@ -115,5 +132,6 @@ class TesseractBackground:
         for a, b in self.edges:
             draw.line((projected[a], projected[b]), fill=255)
         for px, py in projected:
-            if 0 <= px < self.width and 0 <= py < self.height:
-                draw.point((px, py), fill=255)
+            ix, iy = int(round(px)), int(round(py))
+            if 0 <= ix < self.width and 0 <= iy < self.height:
+                draw.point((ix, iy), fill=255)
