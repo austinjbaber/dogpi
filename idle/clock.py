@@ -14,8 +14,8 @@ class ClockAnimator:
         font_paths,
         pad=3,
         border=2,
-        min_spd=0.4,
-        max_spd=0.7,
+        min_spd=16.0,
+        max_spd=28.0,
         edge_buf_x=10,
         edge_buf_y=7,
         starfield_buffer_ease=0.35,
@@ -58,6 +58,7 @@ class ClockAnimator:
 
     @property
     def font_index(self):
+        # Every two variants share a font: one with AM/PM, one without.
         return self.variant_index // 2
 
     @property
@@ -78,6 +79,7 @@ class ClockAnimator:
         time_str = self._format_time(datetime.now())
 
         if time_str != self.last_time_str:
+            # Re-measure only when displayed text changes to avoid per-frame layout work.
             self.last_time_str = time_str
             self.font = self._load_font()
             self.tbx0, self.tby0, tbx1, tby1 = draw.textbbox((0, 0), time_str, font=self.font)
@@ -93,14 +95,15 @@ class ClockAnimator:
     def box_h(self):
         return self.th + 2 * (self.pad + self.border)
 
-    def update_position(self, step, use_starfield_buffer):
-        self.tx += self.vx * step
-        self.ty += self.vy * step
+    def update_position(self, dt, use_starfield_buffer):
+        self.tx += self.vx * dt
+        self.ty += self.vy * dt
 
         hit_x = False
         hit_y = False
 
         if use_starfield_buffer:
+            # Reserve an edge buffer so the clock stays clear of star streaks near boundaries.
             min_x = self.edge_buf_x
             max_x = self.width - self.box_w - self.edge_buf_x
             min_y = self.edge_buf_y
@@ -111,6 +114,7 @@ class ClockAnimator:
 
             if self.tx < min_x:
                 self.vx = abs(self.vx)
+                # Ease back toward bounds instead of snapping (smooth out collisions with starfield edges)
                 self.tx += (min_x - self.tx) * self.starfield_buffer_ease
                 if min_x - self.tx < 0.5:
                     self.tx = min_x
@@ -170,6 +174,7 @@ class ClockAnimator:
                 hit_y = True
 
         if hit_x:
+            # Randomize rebound magnitude while keeping direction, so movement feels less repetitive.
             self.vx = -self.vx
             self.vx = (1 if self.vx > 0 else -1) * self._rand_speed()
         if hit_y:

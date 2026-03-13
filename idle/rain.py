@@ -2,7 +2,7 @@
 
 
 class RainBackground:
-    def __init__(self, width, height, rng, num_drops=40, len_min=3, len_max=10, spd_min=0.8, spd_max=3.0):
+    def __init__(self, width, height, rng, num_drops=40, len_min=3, len_max=10, spd_min=32.0, spd_max=120.0):
         self.width = width
         self.height = height
         self.rng = rng
@@ -21,10 +21,11 @@ class RainBackground:
             for _ in range(self.num_drops)
         ]
 
-    def update_and_draw(self, draw, step):
+    def update_and_draw(self, draw, dt):
         for drop in self.drops:
-            drop["y"] += drop["spd"] * step
+            drop["y"] += drop["spd"] * dt
             if drop["y"] - drop["len"] > self.height:
+                # Recycle drops above the frame with new length/speed for depth variation.
                 drop["x"] = self.rng.randrange(0, self.width)
                 drop["y"] = self.rng.uniform(-10, 0)
                 drop["len"] = self.rng.randint(self.len_min, self.len_max)

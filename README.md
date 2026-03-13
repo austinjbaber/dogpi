@@ -71,6 +71,20 @@ DogPi has 6 modes:
 
 Display returns to **Idle** after 25s of inactivity
 
+## Idle Animation Timing
+
+Idle animation uses a single timing convention across all files in `idle/`:
+
+- Motion updates use real elapsed time in seconds (`dt`).
+- Speed constants are expressed in per-second units.
+- Frame pacing is separate from motion math and is capped at **40 FPS** by default.
+
+Tune idle pacing in `idle/__init__.py`:
+
+- `IDLE_TARGET_FPS = 40.0`
+
+For SH1106 over I2C, a practical range is usually **24-40 FPS** depending on smoothness vs CPU/I2C load.
+
 ## Weather
 
 Weather data is fetched from Open-Meteo (no API key required).
