@@ -34,11 +34,10 @@ class RainV2Background:
         self.lightning_time_left = 0.0
         self.lightning_flash_time = 0.0
         self.lightning_afterglow_time = 0.0
-        self.next_lightning_in = self.rng.uniform(7.0, 14.0)
+        self.next_lightning_in = self.rng.uniform(5.0, 10.0)
         self.lightning_bolts = []
 
         self.frame_index = 0
-        self.splashes = []
         self.drops = []
 
         for _ in range(self.far_count):
@@ -96,12 +95,28 @@ class RainV2Background:
         return list(zip(points, points[1:]))
 
     def _start_lightning(self):
-        start_x = self.rng.randint(self.width // 4, (self.width * 3) // 4)
-        second_start_x = start_x + self.rng.randint(-26, 26)
-        second_start_x = max(6, min(self.width - 7, second_start_x))
+        def clamp_x(x):
+            return max(6, min(self.width - 7, x))
+
+        def make_pair(anchor_x):
+            left = clamp_x(anchor_x + self.rng.randint(-12, -4))
+            right = clamp_x(anchor_x + self.rng.randint(4, 12))
+            return [left, right]
+
+        # 50/50 layout split:
+        # - 4 bolts: two nearby pairs
+        # - 3 bolts: one nearby pair + one solo random bolt
+        if self.rng.random() < 0.5:
+            first_pair_anchor = self.rng.randint(14, self.width - 15)
+            second_pair_anchor = self.rng.randint(14, self.width - 15)
+            bolt_starts = make_pair(first_pair_anchor) + make_pair(second_pair_anchor)
+        else:
+            pair_anchor = self.rng.randint(14, self.width - 15)
+            solo_x = self.rng.randint(6, self.width - 7)
+            bolt_starts = make_pair(pair_anchor) + [solo_x]
 
         self.lightning_bolts = []
-        for bolt_start_x in (start_x, second_start_x):
+        for bolt_start_x in bolt_starts:
             main_points = self._build_lightning_path(
                 start_x=bolt_start_x,
                 start_y=0,
@@ -114,7 +129,7 @@ class RainV2Background:
         self.lightning_time_left = self.rng.uniform(0.30, 0.50)
         self.lightning_flash_time = self.rng.uniform(0.26, 0.40)
         self.lightning_afterglow_time = self.rng.uniform(0.12, 0.22)
-        self.next_lightning_in = self.rng.uniform(9.0, 16.0)
+        self.next_lightning_in = self.rng.uniform(5.0, 10.0)
 
     def _update_lightning(self, dt):
         if self.lightning_time_left > 0.0:
@@ -174,14 +189,6 @@ class RainV2Background:
                 drop["x"] -= self.width
 
             if drop["y"] - drop["len"] > self.height:
-                if drop["layer"] == "near":
-                    self.splashes.append({
-                        "x": int(round(drop["x"])),
-                        "y": self.height - 1,
-                        "ttl": 0.085,
-                        "half_w": self.rng.randint(1, 2),
-                    })
-
                 refreshed = self._spawn_drop(layer=drop["layer"], y_range=(-14, 0))
                 drop["x"] = refreshed["x"]
                 drop["y"] = refreshed["y"]
@@ -201,20 +208,4 @@ class RainV2Background:
                 continue
 
             draw.line((x0, y0, x, y1), fill=255)
-
-        next_splashes = []
-        for splash in self.splashes:
-            splash["ttl"] -= dt
-            if splash["ttl"] <= 0.0:
-                continue
-
-            x = splash["x"]
-            y = splash["y"]
-            half_w = splash["half_w"]
-            x0 = max(0, x - half_w)
-            x1 = min(self.width - 1, x + half_w)
-            draw.line((x0, y, x1, y), fill=255)
-            next_splashes.append(splash)
-
-        self.splashes = next_splashes
         self._draw_lightning(draw)
