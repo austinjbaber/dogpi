@@ -2,8 +2,12 @@
 """DogPi — dog activity logger with OLED UI on Raspberry Pi."""
 
 import time
+from datetime import timedelta
 
+from config import Config
 from hardware import BTN_UP, BTN_DOWN, BTN_SEL, SCREEN_FONT, WHEN_FONT, TOAST_FONT
+from services import HttpService, WeatherService, WeatherSettings
+import screens
 from screens import (
     ui, render_lines,
     MODE_IDLE, MODE_STATUS, MODE_MENU, MODE_WHEN, MODE_WEATHER, MODE_FORECAST,
@@ -11,6 +15,25 @@ from screens import (
     status_lines, menu_lines, when_lines, weather_lines, forecast_lines,
 )
 from idle import render_idle_frame
+
+config = Config()
+http_service = HttpService(
+    base_url=config.base_url,
+    default_headers=config.default_headers,
+)
+weather_settings = WeatherSettings(
+    request_parameters=config.request_parameters,
+    refresh_interval=timedelta(seconds=config.refresh_interval_seconds),
+    forecast_horizon_hours=config.forecast_horizon_hours,
+    wmo_abbr=config.wmo_abbr,
+    wmo_desc=config.wmo_desc,
+)
+weather_service = WeatherService(
+    http_service=http_service,
+    settings=weather_settings,
+)
+screens.configure_weather_service(weather_service)
+
 import inputs  # noqa: F401 — wires button callbacks on import
 
 # ----------------------------
