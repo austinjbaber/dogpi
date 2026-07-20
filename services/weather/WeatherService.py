@@ -8,7 +8,7 @@ from zoneinfo import ZoneInfo
 class WeatherService(IWeatherService):
     _instance = None
 
-    def __new__(cls):
+    def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
@@ -28,10 +28,11 @@ class WeatherService(IWeatherService):
         self.initialized: bool = True
 
     def _fetch_openmeteo_data(self) -> bool:
-        params:dict = self.request_parameters
-        params["current"] = ",".join(params.get("current", ""))
-        params["daily"] = ",".join(params.get("daily", ""))
-        params["hourly"] = ",".join(params.get("hourly", ""))
+        params: dict = dict(self.request_parameters)
+        for key in ("current", "daily", "hourly"):
+            value = params.get(key)
+            if isinstance(value, list):
+                params[key] = ",".join(value)
 
         try:
             response: HttpResponse = self.http_svc.get("/forecast", params=params)
@@ -39,7 +40,7 @@ class WeatherService(IWeatherService):
                 return False
             
             self.weather_dict = response.body_to_json_object()
-            self.last_update = datetime.now(UTC).isoformat(timespec="seconds")
+            self.last_update = datetime.now(UTC)
             self.time_zone = ZoneInfo(self.weather_dict.get("timezone"))
             return True
         except Exception as e:
@@ -92,7 +93,14 @@ class WeatherService(IWeatherService):
 
         
         now = datetime.now(self.time_zone)
-        start_index = next((idx for idx, time in enumerate(times) if datetime.fromisoformat(time).astimezone(self.time_zone) > now), -1)
+        start_index = next(
+            (
+                idx
+                for idx, time in enumerate(times)
+                if datetime.fromisoformat(time).replace(tzinfo=self.time_zone) > now
+            ),
+            -1,
+        )
         if start_index == -1:
             return
         

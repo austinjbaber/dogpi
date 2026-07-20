@@ -44,6 +44,23 @@ class UIState:
 
 ui = UIState(last_input_t=time.monotonic())
 
+weather = {
+    "fetched_at": None,
+    "fetched_ts": 0.0,
+    "temp_f": None,
+    "feels_f": None,
+    "rh": None,
+    "wind_mph": None,
+    "wind_dir": None,
+    "pop": None,
+    "hi_f": None,
+    "lo_f": None,
+    "sunrise": None,
+    "sunset": None,
+    "hourly": [],
+    "err": None,
+}
+
 # ----------------------------
 # Menu definition
 # ----------------------------
@@ -265,7 +282,8 @@ def weather_lines():
     wd_card = deg_to_cardinal(wind_dir) if wind_dir is not None else ""
     wind_str = f"{_safe_display(wind, 'mph')} {wd_card}".strip()
 
-    age_m = int(max(0, (time.time() - float(weather.get("fetched_at") or 0)) // 60))
+    fetched_ts = weather.get("fetched_ts")
+    age_m = int(max(0, (time.time() - float(fetched_ts)) // 60)) if fetched_ts else 0
     stale = "" if age_m < 60 else f" ({age_m // 60}h)"
 
     fetched_at = weather.get("fetched_at")
@@ -273,6 +291,7 @@ def weather_lines():
         fetched_str = iso_to_compact_time(fetched_at)
     else:
         fetched_str = "--:--"
+    fetched_age = f"{age_m}m ago{stale}" if fetched_ts else "never"
 
     C = "center"  # shorthand
     lines = [
@@ -284,7 +303,7 @@ def weather_lines():
         (f"Hi: {_safe_display(hi, 'F')}  Lo: {_safe_display(lo, 'F')}", C),
         (f"Sunrise: {sr}", C),
         (f"Sunset: {ss}", C),
-        (f"{fetched_str}  {age_m}m ago{stale}", C),
+        (f"{fetched_str}  {fetched_age}", C),
     ]
 
     err = weather.get("err")
@@ -317,10 +336,14 @@ def forecast_lines():
 def process_hourly_forcast(forecast: list[HourForecast]) -> list[dict]:
     hourly: list[dict] = []
     for hour in forecast:
+        if hour.time:
+            time_str = hour.time.strftime("%I%p").lstrip("0").lower()
+        else:
+            time_str = "?"
         hourly.append(
             {
-                "time_str" : hour.time,
-                "temp_f"   : hour.temperature,
+                "time_str" : time_str,
+                "temp_f"   : hour.temperature.fahrenheit if hour.temperature else None,
                 "pop"      : hour.precipitation_probability,
                 "code"     : hour.weather_code,
                 "abbr"     : hour.wmo_abbr,
@@ -331,24 +354,33 @@ def process_hourly_forcast(forecast: list[HourForecast]) -> list[dict]:
 
 def weather_refresh():
     global weather
-    config = Config()
-    base_url = config.base_url
-    default_headers = config.default_headers
-    http_svc = HttpService(base_url = base_url, default_headers= default_headers)
-    weather_svc = WeatherService(http_service=http_svc)
-    weather_data = weather_svc.get_weather_data()
-    weather = {
-        "fetched_at": weather_data.observed_at,
-        "temp_f"    : weather_data.current.temperature.fahrenheit,
-        "feels_f"   : weather_data.current.apparent_temperature.fahrenheit,
-        "rh"        : weather_data.current.relative_humidity,
-        "wind_mph"  : weather_data.current.wind.speed_mph,
-        "wind_dir"  : weather_data.current.wind.direction,
-        "pop"       : weather_data.daily.precipitation_probability,
-        "hi_f"      : weather_data.daily.high.fahrenheit,
-        "lo_f"      : weather_data.daily.low.fahrenheit,
-        "sunrise"   : weather_data.daily.sunrise,
-        "sunset"    : weather_data.daily.sunset,
-        "hourly"    : process_hourly_forcast(weather_data.hourly),
-        "err"       : None,
-    }
+    try:
+        config = Config()
+        http_svc = HttpService(
+            base_url=config.base_url,
+            default_headers=config.default_headers,
+        )
+        weather_svc = WeatherService(http_service=http_svc)
+        weather_data = weather_svc.get_weather_data()
+        if not weather_data:
+            weather["err"] = "Weather unavailable"
+            return
+
+        weather = {
+            "fetched_at": datetime_to_iso_seconds(weather_data.observed_at),
+            "fetched_ts": weather_data.observed_at.timestamp() if weather_data.observed_at else 0.0,
+            "temp_f"    : weather_data.current.temperature.fahrenheit,
+            "feels_f"   : weather_data.current.apparent_temperature.fahrenheit,
+            "rh"        : weather_data.current.relative_humidity,
+            "wind_mph"  : weather_data.current.wind.speed_mph,
+            "wind_dir"  : weather_data.current.wind.direction,
+            "pop"       : weather_data.daily.precipitation_probability,
+            "hi_f"      : weather_data.daily.high.fahrenheit,
+            "lo_f"      : weather_data.daily.low.fahrenheit,
+            "sunrise"   : datetime_to_iso_seconds(weather_data.daily.sunrise),
+            "sunset"    : datetime_to_iso_seconds(weather_data.daily.sunset),
+            "hourly"    : process_hourly_forcast(weather_data.hourly),
+            "err"       : None,
+        }
+    except Exception as exc:
+        weather["err"] = str(exc)[:60]
