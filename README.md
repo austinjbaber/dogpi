@@ -88,14 +88,30 @@ For SH1106 over I2C, a practical range is usually **24-40 FPS** depending on smo
 ## Weather
 
 Weather data is fetched from Open-Meteo (no API key required).
-Default coordinates are Tucson, AZ — edit `WEATHER_LAT` / `WEATHER_LON` in `weather.py` to change location.
+Default coordinates are Tucson, AZ. Weather options are configured in `config.json`:
+
+- `request_parameters.latitude` / `request_parameters.longitude`: forecast location
+- `refresh_interval_seconds`: minimum time between refresh attempts (default: 600 seconds)
+- `forecast_horizon_hours`: number of upcoming hourly entries to keep (default: 24)
+- `request_parameters`: Open-Meteo units and requested current, daily, and hourly fields
 
 Behavior:
 
-- Refreshes at most every **10 minutes** (`WEATHER_REFRESH_S`)
-- Shows cached data for up to **2 hours** (`WEATHER_MAX_STALE_S`)
-- Status screen shows **current temp** from Open-Meteo when available; otherwise falls back to **CPU temp**
-- Forecast keeps the next **24 hours** (`HOURLY_HOURS`) and displays a compact WMO condition abbreviation
+- `app.py` constructs one `HttpService` and `WeatherService`, then injects the weather service into `screens.py`.
+- Refresh attempts occur at most once per configured refresh interval, including after failures.
+- If a refresh fails, the most recent successful data remains available and is reported as stale with an error.
+- The status screen shows the current Open-Meteo temperature when available.
+- The forecast displays compact hourly time, temperature, precipitation, and WMO condition values.
+
+## Tests
+
+Run the complete test suite from the project directory:
+
+```bash
+python3 -m pytest -q
+```
+
+Tests cover time and direction helpers, HTTP transport failures, weather parsing and caching, refresh throttling, stale-data fallback, timezone handling, and weather screen conversion.
 
 ## Data
 
@@ -114,50 +130,56 @@ Events are stored in `dog_log.json` as a flat list:
 
 ```
 dogpi/
-├── app.py           Main loop — runs the active screen or idle renderer
-├── hardware.py      GPIO buttons, SH1106 device setup, shared fonts
-├── state.py         JSON persistence (dog_log.json) and event helpers
-├── weather.py       Open-Meteo fetch, cache, current conditions, hourly forecast
-├── screens.py       Shared UI state, rendering, menus, status/weather builders
-├── inputs.py        Button callbacks, hold-to-cancel logic, input wiring
-├── helpers/         Time and direction formatting helpers
-│   ├── time_helpers.py
-│   └── direction_helpers.py
-├── idle/            Idle-mode renderer and animated backgrounds
-│   ├── __init__.py  Public idle API used by app.py and inputs.py
-│   ├── clock.py     Bouncing clock animator and font cycling
-│   ├── rain.py      Rain background
-│   ├── icosahedron.py  Wireframe icosahedron background
-│   ├── starfield.py Starfield background
-│   └── tesseract.py 4D tesseract background
-├── tests/           Unit tests for helper modules
+├── app.py                     Composition root and main display loop
+├── config.py                  JSON-backed application configuration
+├── config.json                Weather location, fields, units, and timing
+├── hardware.py                GPIO buttons, SH1106 device setup, shared fonts
+├── inputs.py                  Button callbacks and input wiring
+├── screens.py                 UI state, weather view models, and rendering
+├── state.py                   Event persistence and lookup helpers
+├── weather.py                 Legacy weather implementation (not imported)
+├── helpers/                   Time, direction, and number helpers
+├── idle/                      Idle renderer and animated backgrounds
+├── services/
+│   ├── http/
+│   │   ├── IHttpService.py    HTTP abstraction
+│   │   ├── HttpService.py     urllib-based HTTP implementation
+│   │   └── models/            HttpResponse model
+│   └── weather/
+│       ├── IWeatherService.py Weather abstraction consumed by screens
+│       ├── WeatherService.py  Open-Meteo adapter, parser, and cache
+│       ├── WeatherSettings.py Injected weather configuration
+│       └── models/            Current, daily, hourly, and result models
+├── tests/
+│   ├── test_http_service.py
+│   ├── test_weather_service.py
+│   ├── test_weather_screens.py
 │   ├── test_time_helpers.py
 │   └── test_direction_helpers.py
-└── dog_log.json     Event log (created automatically)
- 
+└── dog_log.json               Event log (created automatically)
 ```
 
 ### Module dependency graph
 
 ```
 app.py
- ├── hardware    (buttons, device, fonts)
- ├── screens     (UI state, rendering, line builders)
- │    ├── hardware
- │    ├── state
- │    ├── helpers
+ ├── config
+ ├── hardware
+ ├── services
+ │    ├── http
  │    └── weather
- ├── idle        (idle renderer package)
+ │         └── helpers
+ ├── screens
+ │    ├── IWeatherService
  │    ├── hardware
- │    ├── idle.clock
- │    ├── idle.rain
- │    ├── idle.icosahedron
- │    ├── idle.starfield
- │    └── idle.tesseract
- └── inputs      (button wiring)
+ │    ├── helpers
+ │    └── state
+ ├── idle
+ │    └── hardware
+ └── inputs
       ├── hardware
       ├── idle
       └── screens
 ```
 
-No circular imports. `hardware.py`, `state.py`, `weather.py`, and `helpers/` are leaf modules; `screens.py`, `idle/`, and `inputs.py` build on top of them.
+`app.py` is the composition root: it creates the concrete HTTP and weather services and configures `screens.py` through `IWeatherService` before input callbacks are registered.
