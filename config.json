@@ -32,7 +32,7 @@
         ]
     },
     "refresh_interval_seconds" : 600,
-    "forcast_horizon_hours" : 24,
+    "forecast_horizon_hours" : 24,
     "wmo_desc" : 
     {
         "0": "Clear",

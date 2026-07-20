@@ -22,5 +22,11 @@ class IHttpService(ABC):
         params : dict[str, str], optional
             Dictionary of query parameters to append to the URL.  
             Example: ``{"Name": "John"}``
+
+        Raises
+        ------
+        HttpTransportError
+            If no HTTP response can be received because of a connection,
+            timeout, DNS, or other transport failure.
         """
         pass

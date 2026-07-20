@@ -10,9 +10,9 @@ I2C_ADDR = 0x3C
 # ----------------------------
 # Buttons
 # ----------------------------
-BTN_UP   = Button(17, pull_up=True, bounce_time=0.12)
+BTN_DOWN   = Button(17, pull_up=True, bounce_time=0.12)
 BTN_SEL  = Button(27, pull_up=True, bounce_time=0.12)
-BTN_DOWN = Button(22, pull_up=True, bounce_time=0.12)
+BTN_UP = Button(22, pull_up=True, bounce_time=0.12)
 
 # ----------------------------
 # OLED

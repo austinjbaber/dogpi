@@ -1,4 +1,5 @@
 from services.http.IHttpService import IHttpService
+from services.http.HttpTransportError import HttpTransportError
 from services.http.models import HttpResponse
 from urllib.parse import urlencode, urljoin, urlparse, ParseResult
 from urllib.response import addinfourl
@@ -114,10 +115,9 @@ class HttpService(IHttpService):
                 body = e.msg
             )
         except URLError as e:
-            # TODO: We need to implement logging and log these exceptions.
-            print(f'Error: {repr(e)}')
+            raise HttpTransportError(f"GET {request_url} failed: {e.reason}") from e
         except Exception as e:
-            print(f'Error: {repr(e)}')
+            raise HttpTransportError(f"GET {request_url} failed: {e}") from e
         finally:
             if response:
                 response.close()

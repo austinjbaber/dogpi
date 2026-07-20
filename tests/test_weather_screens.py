@@ -13,27 +13,13 @@ from services.weather.models import (
     HourForecast,
     Temperature,
     WeatherData,
+    WeatherResult,
     WindVector,
 )
 
 
-def _empty_weather_state():
-    return {
-        "fetched_at": None,
-        "fetched_ts": 0.0,
-        "temp_f": None,
-        "feels_f": None,
-        "rh": None,
-        "wind_mph": None,
-        "wind_dir": None,
-        "pop": None,
-        "hi_f": None,
-        "lo_f": None,
-        "sunrise": None,
-        "sunset": None,
-        "hourly": [],
-        "err": None,
-    }
+def _empty_weather_state(screens_module):
+    return screens_module.WeatherViewState()
 
 
 def _weather_data():
@@ -81,98 +67,137 @@ def screens_module(monkeypatch):
     sys.modules.pop("screens", None)
 
 
-def _stub_weather_dependencies(monkeypatch, screens_module, result):
-    monkeypatch.setattr(
-        screens_module,
-        "Config",
-        lambda: SimpleNamespace(base_url="https://example.test", default_headers={}),
-    )
-    monkeypatch.setattr(screens_module, "HttpService", lambda **_kwargs: object())
-    monkeypatch.setattr(
-        screens_module,
-        "WeatherService",
-        lambda **_kwargs: SimpleNamespace(get_weather_data=lambda: result),
+def _configure_weather_result(
+    screens_module,
+    data,
+    error=None,
+    is_stale=False,
+):
+    screens_module.configure_weather_service(
+        SimpleNamespace(
+            get_weather_data=lambda: WeatherResult(
+                data=data,
+                error=error,
+                is_stale=is_stale,
+            )
+        )
     )
 
 
 def test_process_hourly_forecast_produces_display_values(screens_module):
     hourly = _weather_data().hourly
 
-    result = screens_module.process_hourly_forcast(hourly)
+    result = screens_module.process_hourly_forecast(hourly)
 
     assert result == [
-        {
-            "time_str": "3pm",
-            "temp_f": 73,
-            "pop": 5,
-            "code": 0,
-            "abbr": "Clear",
-            "desc": "Clear",
-        }
+        screens_module.HourlyWeatherView(
+            time_str="3pm",
+            temp_f=73,
+            pop=5,
+            code=0,
+            abbr="Clear",
+            desc="Clear",
+        )
     ]
 
 
-def test_weather_refresh_converts_datetimes_and_temperature_objects(
-    screens_module, monkeypatch
-):
+def test_weather_view_states_do_not_share_hourly_lists(screens_module):
+    first = screens_module.WeatherViewState()
+    second = screens_module.WeatherViewState()
+
+    first.hourly.append(screens_module.HourlyWeatherView())
+
+    assert second.hourly == []
+
+
+def test_weather_refresh_converts_datetimes_and_temperature_objects(screens_module):
     data = _weather_data()
-    _stub_weather_dependencies(monkeypatch, screens_module, data)
+    _configure_weather_result(screens_module, data)
 
     screens_module.weather_refresh()
 
-    assert screens_module.weather["fetched_at"] == "2026-01-15T14:05:00+00:00"
-    assert screens_module.weather["fetched_ts"] == data.observed_at.timestamp()
-    assert screens_module.weather["sunrise"] == "2026-01-15T07:25:00+00:00"
-    assert screens_module.weather["sunset"] == "2026-01-15T17:42:00+00:00"
-    assert screens_module.weather["temp_f"] == 72
-    assert screens_module.weather["hourly"][0]["temp_f"] == 73
-    assert screens_module.weather["err"] is None
+    assert screens_module.weather.fetched_at == "2026-01-15T14:05:00+00:00"
+    assert screens_module.weather.fetched_ts == data.observed_at.timestamp()
+    assert screens_module.weather.sunrise == "2026-01-15T07:25:00+00:00"
+    assert screens_module.weather.sunset == "2026-01-15T17:42:00+00:00"
+    assert screens_module.weather.temp_f == 72
+    assert screens_module.weather.hourly[0].temp_f == 73
+    assert screens_module.weather.err is None
+    assert screens_module.weather.is_stale is False
 
 
 def test_weather_refresh_preserves_existing_data_when_no_data_is_available(
-    screens_module, monkeypatch
+    screens_module,
 ):
-    screens_module.weather = _empty_weather_state()
-    screens_module.weather["temp_f"] = 72
+    screens_module.weather = _empty_weather_state(screens_module)
+    screens_module.weather.temp_f = 72
     existing_weather = screens_module.weather
-    _stub_weather_dependencies(monkeypatch, screens_module, None)
+    _configure_weather_result(screens_module, None, error="Weather unavailable")
 
     screens_module.weather_refresh()
 
     assert screens_module.weather is existing_weather
-    assert screens_module.weather["temp_f"] == 72
-    assert screens_module.weather["err"] == "Weather unavailable"
+    assert screens_module.weather.temp_f == 72
+    assert screens_module.weather.err == "Weather unavailable"
 
 
-def test_weather_refresh_preserves_existing_data_when_refresh_raises(
-    screens_module, monkeypatch
-):
-    screens_module.weather = _empty_weather_state()
-    screens_module.weather["temp_f"] = 72
+def test_weather_refresh_displays_an_error_with_stale_data(screens_module):
+    data = _weather_data()
+    _configure_weather_result(
+        screens_module,
+        data,
+        error="network is down",
+        is_stale=True,
+    )
+
+    screens_module.weather_refresh()
+
+    assert screens_module.weather.temp_f == 72
+    assert screens_module.weather.err == "network is down"
+    assert screens_module.weather.is_stale is True
+
+
+def test_weather_refresh_preserves_existing_data_when_refresh_raises(screens_module):
+    screens_module.weather = _empty_weather_state(screens_module)
+    screens_module.weather.temp_f = 72
     existing_weather = screens_module.weather
 
-    def raise_during_construction(**_kwargs):
+    def raise_during_refresh():
         raise RuntimeError("network is down")
 
-    monkeypatch.setattr(
-        screens_module,
-        "Config",
-        lambda: SimpleNamespace(base_url="https://example.test", default_headers={}),
+    screens_module.configure_weather_service(
+        SimpleNamespace(get_weather_data=raise_during_refresh)
     )
-    monkeypatch.setattr(screens_module, "HttpService", lambda **_kwargs: object())
-    monkeypatch.setattr(screens_module, "WeatherService", raise_during_construction)
 
     screens_module.weather_refresh()
 
     assert screens_module.weather is existing_weather
-    assert screens_module.weather["temp_f"] == 72
-    assert screens_module.weather["err"] == "network is down"
+    assert screens_module.weather.temp_f == 72
+    assert screens_module.weather.err == "network is down"
+
+
+def test_weather_refresh_reuses_the_configured_service(screens_module):
+    data = _weather_data()
+    calls = []
+
+    def get_weather_data():
+        calls.append(True)
+        return WeatherResult(data=data)
+
+    service = SimpleNamespace(get_weather_data=get_weather_data)
+    screens_module.configure_weather_service(service)
+
+    screens_module.weather_refresh()
+    screens_module.weather_refresh()
+
+    assert screens_module._weather_service is service
+    assert len(calls) == 2
 
 
 def test_weather_lines_show_never_before_first_successful_fetch(
     screens_module, monkeypatch
 ):
-    screens_module.weather = _empty_weather_state()
+    screens_module.weather = _empty_weather_state(screens_module)
     monkeypatch.setattr(screens_module, "weather_refresh", lambda: None)
 
     lines = screens_module.weather_lines()
