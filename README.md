@@ -137,7 +137,6 @@ dogpi/
 ├── inputs.py                  Button callbacks and input wiring
 ├── screens.py                 UI state, weather view models, and rendering
 ├── state.py                   Event persistence and lookup helpers
-├── weather.py                 Legacy weather implementation (not imported)
 ├── helpers/                   Time, direction, and number helpers
 ├── idle/                      Idle renderer and animated backgrounds
 ├── services/
