@@ -184,3 +184,4 @@ For an SH1106 display over I2C, 24–40 FPS is a practical tuning range dependin
 - Add a short animated demo and a full video walkthrough of the hardware, UI, and enclosure
 - Expand the weather screen with a navigable multi-day forecast
 - Reuse the HTTP service abstraction for additional features
+- Implement test automation with GitHub Actions
