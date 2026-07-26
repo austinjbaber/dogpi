@@ -6,25 +6,25 @@
 
 ## Project overview
 
-DogPi replaces easy-to-forget notes and phone entries with a small, purpose-built device that stays near the door. A user can record a pee, poop, or both in a few button presses, including an estimated time when the event was not logged immediately. The OLED status screen then makes the most useful information—how long it has been and what the weather is doing—available at a glance.
+Coordinating pet care in a shared household can be surprisingly difficult. DogPi provides a simple, shared record of bathroom breaks on a purpose-built device that stays near the door. With a few button presses, anyone can log a pee, poop, or both, including an estimated time for an event recorded later. The OLED shows how long it has been and the current weather at a glance.
 
-The project brings software, electronics, and mechanical design into one working product. It combines a state-driven embedded UI, GPIO input, durable local storage, a fault-tolerant weather integration, automated tests, and a custom 3D-printable enclosure.
+The project combines software, electronics, and mechanical design into one working product. It uses a state-driven embedded UI, GPIO input, durable local storage, a fault-tolerant weather integration, automated tests, and a custom 3D-printable enclosure.
 
 ## Key features
 
 - Physical three-button interface with a six-state OLED UI
-- Timestamped activity logging for pee, poop, or both, with an adjustable “how long ago” picker
+- Timestamped activity logging for pee, poop, or both, with an adjustable "how long ago" picker
 - At-a-glance status showing the most recent events and current temperature
-- Current conditions and a scrollable hourly forecast from Open-Meteo
+- Current weather stats and a scrollable hourly forecast from Open-Meteo
 - Cached weather data with refresh throttling and stale-data fallback
-- Configurable animated idle screens with real-time motion and bounded frame pacing
+- 5 configurable animated idle screens with real-time motion and bounded frame pacing
 - Undo support and atomic JSON persistence across restarts
 - Parametric OpenSCAD enclosure with ready-to-print STL files
 - Automated regression tests for networking, caching, parsing, screen conversion, and timezones
 
 ## Architecture and engineering highlights
 
-DogPi keeps hardware concerns, application state, presentation, and external services separated. `app.py` acts as the composition root: it loads configuration, creates the HTTP and weather services, injects the weather dependency into the UI, and then registers the GPIO callbacks.
+DogPi keeps hardware concerns, application state, screen rendering, and external services separated. `app.py` acts as the composition root: it loads configuration, creates the HTTP and weather services, injects the weather dependency into the UI, and then registers GPIO callbacks.
 
 ```text
 Three GPIO buttons ──> input callbacks ──> UI state + screen rendering ──> SH1106 OLED
@@ -46,44 +46,50 @@ Notable design decisions include:
 - **Deterministic time handling:** the weather service accepts an injectable clock and interprets forecast values in the timezone returned by the API.
 - **Safe local persistence:** events are first written to a temporary file and committed with `os.replace`, reducing the risk of a partially written log.
 - **Hardware-aware animation:** idle renderers update motion using elapsed time rather than frame count. Rendering cadence is capped separately at 40 FPS to balance smoothness against CPU and I2C load.
-- **Configuration outside the code:** coordinates, units, requested forecast fields, refresh timing, and forecast horizon live in `config.json`.
+- **Configuration outside the code:** coordinates, units, requested forecast fields, refresh timing, and forecast intervals live in `config.json`.
 
 ## Hardware and enclosure
 
 | Component | Details |
 |---|---|
-| Computer | Raspberry Pi with GPIO and I2C; enclosure designed for a Pi Zero 2 W |
+| Computer | Raspberry Pi with GPIO and I2C. Enclosure designed for a Pi Zero 2 W |
 | Display | 1.3-inch SH1106 OLED, 128 × 64, I2C (`0x3C`) |
-| Controls | 3 × momentary buttons: UP on GPIO 22, SELECT on GPIO 27, DOWN on GPIO 17 |
+| Controls | 3x momentary buttons: UP on GPIO 22, SELECT on GPIO 27, DOWN on GPIO 17 |
 | Enclosure | Two-part parametric OpenSCAD design with committed base and lid STLs |
 
 ![Rendered DogPi enclosure](assets/enclosure_render.png)
 
-The enclosure integrates the Pi, display, and three vertically arranged 12 mm panel-mount buttons into an angled desktop control panel. Its OpenSCAD source exposes fit, wall thickness, panel angle, port clearance, display geometry, button spacing, and snap-fit parameters so tolerances can be adapted to a specific printer or component variant.
+The enclosure integrates the Pi, display, and three vertically arranged 12 mm panel-mount buttons into an angled desktop control panel. Its OpenSCAD source exposes the following variables so tolerances can be adapted to a specific printer or filament:
+- Fit
+- Wall thickness
+- Panel angle
+- Port clearance
+- Button spacing
+- Snap-fit parameters 
 
-See [`cad/README.md`](cad/README.md) for dimensions, fasteners, fit limitations, rendering instructions, and the supplied STL files.
+See [`cad/README.md`](cad/README.md) for dimensions, printing instructions, and fit details.
 
 ## UI and controls
 
 The interface is organized around six explicit modes:
 
-- **Idle:** animated background and clock
-- **Status:** most recent pee and poop times plus current temperature
-- **Menu:** log, undo, weather, and forecast actions
-- **When:** hours and 0/15/30/45-minute offset picker
-- **Weather:** scrollable current conditions
-- **Forecast:** scrollable hourly forecast
+- **Idle:** 5 dynamic, burn in-resistant animated backgrounds and DVD-style bouncing clock
+- **Status:** Current date and time, most recent pee and poop times, and current local temp/feels-like temp
+- **Menu:** Select from log pee/poo/both, undo, current weather, and forecast
+- **When:** Selectable hours and 0/15/30/45-minute offset to log an event
+- **Weather:** Scrollable current weather conditions
+- **Forecast:** Scrollable hourly forecast (24-hour by default)
 
 | Screen | UP | SELECT | DOWN |
 |---|---|---|---|
-| **Idle** | Cycle background | Open status | Cycle font |
+| **Idle** | Cycle backgrounds | Open status | Cycle font |
 | **Status** | — | Open menu | — |
-| **Menu** | Previous item | Choose item | Next item |
-| **When** | Increment value | Next field / confirm | Decrement value |
+| **Menu** | Previous | Select | Next |
+| **When** | Increment | Next field / confirm | Decrement |
 | **Weather** | Scroll up | — | Scroll down |
 | **Forecast** | Scroll up | — | Scroll down |
 
-Hold **SELECT** for 0.6 seconds to go back or cancel. After 25 seconds without input, the display returns to the idle screen.
+Hold **SELECT** for 0.6 seconds to return to previous mode. After 25 seconds without input, the display returns to idle mode.
 
 ## Setup and usage
 
@@ -95,24 +101,23 @@ sudo raspi-config
 sudo reboot
 ```
 
-The OLED can be checked after reboot with `i2cdetect -y 1`; the default display address is `0x3C`.
+OLED can be checked after reboot with `i2cdetect -y 1`
+The default display address is `0x3C`.
 
 ### 2. Install dependencies
 
 ```bash
 sudo apt update
-sudo apt install -y python3-pip i2c-tools \
-  fonts-dejavu fonts-liberation fonts-freefont-ttf
-
+sudo apt install -y python3-pip i2c-tools fonts-dejavu fonts-liberation fonts-freefont-ttf
 pip3 install -r requirements.txt
 ```
 
 ### 3. Configure weather
 
-Weather uses Open-Meteo and does not require an API key. Edit `config.json` to set:
-
+Weather uses Open-Meteo and does not require an API key.
+Edit `config.json` to set:
 - `request_parameters.latitude` and `request_parameters.longitude` for the forecast location
-- `request_parameters` for units and requested current, daily, and hourly fields
+- `request_parameters` for units and requested current/daily/hourly fields
 - `refresh_interval_seconds` for the minimum interval between attempts (default: 600)
 - `forecast_horizon_hours` for the number of upcoming entries retained (default: 24)
 
@@ -151,20 +156,20 @@ The tests exercise time and direction helpers, HTTP transport failures, weather 
 
 ```text
 dogpi/
-├── app.py                     Composition root and main display loop
-├── config.py                  JSON-backed application configuration
+├── app.py                     Root, main display loop
+├── config.py                  Configuration
 ├── config.json                Weather location, fields, units, and timing
-├── hardware.py                GPIO buttons, SH1106 setup, and shared fonts
-├── inputs.py                  Button callbacks and state transitions
+├── hardware.py                GPIO buttons, SH1106 setup, shared fonts
+├── inputs.py                  Button callbacks, state transitions
 ├── screens.py                 UI state, view models, and OLED rendering
 ├── state.py                   Atomic event persistence and lookup helpers
 ├── helpers/                   Time, direction, and numeric helpers
-├── idle/                      Idle renderer and animated backgrounds
+├── idle/                      Idle renderer, animated backgrounds
 ├── services/
-│   ├── http/                  HTTP interface, implementation, and response model
-│   └── weather/               Weather interface, adapter, cache, and data models
-├── cad/                       Parametric OpenSCAD source and printable STLs
-├── assets/                    Photograph and enclosure render
+│   ├── http/                  HTTP interface, implementation, response model
+│   └── weather/               Weather interface, adapter, cache, data models
+├── cad/                       Parametric OpenSCAD source, printable STLs
+├── assets/                    Assembled device photo, enclosure render
 ├── tests/                     Automated regression suite
 └── requirements.txt           Python dependencies
 ```
