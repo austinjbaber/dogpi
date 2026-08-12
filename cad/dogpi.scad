@@ -102,13 +102,6 @@ side_tunnel_depth = wall + 1.2;
 side_port_clear = 0.50;
 side_port_z = 5.1;
 
-// Connector widths
-mini_hdmi_w = 12.1;
-mini_hdmi_h = 5.5;
-
-micro_usb_w = 8.1;
-micro_usb_h = 4.5;
-
 // Board-view connector center X positions (from the Pi drawing/blueprint)
 mini_hdmi_c = 12.4;
 usb1_c      = 41.4;
@@ -361,9 +354,14 @@ module base_part() {
     }
 
         // Right-side port tunnels: mini HDMI + 2x micro USB
-        side_port_tunnel_center(mini_hdmi_c, side_port_z, mini_hdmi_w, mini_hdmi_h);
-        side_port_tunnel_center(usb1_c,      side_port_z, micro_usb_w, micro_usb_h);
-        side_port_tunnel_center(usb2_c,      side_port_z, micro_usb_w, micro_usb_h);
+        // 13 mm + 0.5 mm clearance per side = 14 mm finished width.
+        // Keep the original lower edge so the 7 mm opening expands upward.
+        side_port_tunnel_center(mini_hdmi_c, side_port_z, 13.0, 7.0);
+
+        // 10 mm + 0.5 mm clearance per side = 11 mm finished width.
+        // Keep the original lower edge so the 7.5 mm openings expand upward.
+        side_port_tunnel_center(usb1_c, side_port_z, 10.0, 7.5);
+        side_port_tunnel_center(usb2_c, side_port_z, 10.0, 7.5);
 
     }
 }
