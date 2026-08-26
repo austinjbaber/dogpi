@@ -65,7 +65,7 @@ The enclosure integrates the Pi, display, and three vertically arranged 12 mm pa
 - Panel angle
 - Port clearance
 - Button spacing
-- Snap-fit parameters 
+- Front-tab and captive-nut closure clearances
 
 See [`cad/README.md`](cad/README.md) for dimensions, printing instructions, and fit details.
 
