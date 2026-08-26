@@ -10,8 +10,8 @@ control deck. Dimensions in the OpenSCAD source are in millimetres.
 | File | Description |
 | --- | --- |
 | `dogpi.scad` | Parametric OpenSCAD source for the base, lid, cutouts, and markings. |
-| `dogpi_base.stl` | Ready-to-slice base. Its mesh bounds are approximately 61.78 × 75 × 25 mm, including the snap catches. |
-| `dogpi_lid.stl` | Ready-to-slice lid. Its mesh bounds are approximately 64.2 × 79.2 × 79.2 mm. |
+| `base.stl` | Ready-to-slice base. Its mesh bounds are 60 × 75 × 25 mm. |
+| `lid.stl` | Ready-to-slice lid. Its mesh bounds are approximately 64.2 × 112.0 × 64.5 mm. |
 
 ## Intended hardware
 
@@ -63,13 +63,36 @@ Check the diameter of the threaded barrel rather than the button-cap diameter.
 The complete enclosure uses:
 
 - 8 × M2.5 × 8 mm screws
-- 8 × M2.5 nuts
-- 4 × M2.5 washers, 1 mm thick, one at each Pi mounting point
+- 2 × M2.5 × 6 mm screws
+- 10 × M2.5 nuts
+- 4 × M2.5 washers (1 mm thick)
 
 Four screw-and-nut sets mount the Raspberry Pi and four mount the OLED. The
-1 mm washers provide the intended spacing for the Pi board. Confirm that an
-8 mm screw provides adequate thread engagement with your actual PCB, washer,
-and nut stack before final assembly.
+1 mm washers provide the intended spacing for the Pi board. The remaining two
+nuts drop into the rear closure pockets. An 8 mm screw can be used for
+the closure if that is what the standoff kit provides, but it may extend
+into the wiring cavity.
+
+### Lid closure and assembly
+
+There are two rigid front tuck tabs and two rear captive-nut screws.
+
+1. Insert one M2.5 nut into each open slot in the two rear base bosses.
+2. Hold the rear of the lid slightly raised and insert both front tabs into the
+   receiver slots.
+3. Pivot the rear of the lid down. Do not force the lid as a fixed hinge.
+   Continue until the three-sided internal stop lip rests on the base rim.
+4. Insert an M2.5 screw through each rear lid hole and tighten it into the
+   captive nut.
+
+The closure screws use the same M2.5 hardware as the Pi mounts. Their
+printed clearance holes are 3.0 mm rather than the Pi holes' 2.8 mm because the
+rear screws pass horizontally through two printed walls and need reliable FDM
+clearance. The rear holes are not counterbored.
+
+Each default front tab is 11 mm wide, and each receiver is 11.5 mm wide for
+0.25 mm clearance at either side. The two independent receivers tolerate minor
+front-wall bowing better than one long, continuous mating feature.
 
 ## Important OpenSCAD parameters
 
@@ -81,6 +104,7 @@ Commonly adjusted values are near the top of `dogpi.scad`.
 | `show_base`, `show_lid` | `true`, `true` | Select which parts are rendered or exported. |
 | `show_assembled` | `false` | Switch between assembled and exploded preview. |
 | `explode_gap` | `16` | Preview separation between the base and lid. |
+| `render_target` | `0` | CLI/export selector described below. |
 | `fit` | `0.30` | Lid clearance per side; the lid cavity grows by `2 * fit` in X and Y. |
 | `button_hole_clear` | `0.20` | Extra diameter added to each nominal 12 mm button hole. |
 | `oled_mount_hole_clear` | `0.25` | Extra diameter added to each nominal 2.5 mm OLED hole. |
@@ -97,29 +121,51 @@ Commonly adjusted values are near the top of `dogpi.scad`.
 | `btn_step_y` | `16` | Button center spacing along the sloped deck. |
 | `font_i` | `9` | Selects the font used for the recessed `dogpi` marking. |
 
-Advanced snap-fit controls include `tab_t`, `tab_w`, `tab_gap`, `barb_depth`,
-`barb_h`, `catch_t`, `catch_h`, and `stop_lip_inset`. Change these in small
-increments when tuning.
+The closure can be tuned with `front_tab_w`, `front_tab_depth`, `front_tab_t`,
+`front_tab_xy_clear`, `front_tab_z_clear`, `front_receiver_depth`,
+`pivot_preview_slide`, `closure_screw_d`, `closure_nut_af`, `closure_nut_t`, and
+`closure_nut_clear`. Receiver depth, tab depth, and slide travel are coupled:
+keep each receiver deeper than the tab projection by at least the slide travel
+plus the desired back clearance. Measure the nuts in the intended hardware kit
+before changing their pocket dimensions.
 
 ## Rendering and exporting
 
 Open `dogpi.scad` in OpenSCAD and use a full render (`F6`) before exporting.
-Export only one part at a time:
+For an interactive preview, leave `render_target = 0` and use the existing
+`show_base`, `show_lid`, and `show_assembled` controls. For deterministic CLI
+rendering and exports, set `render_target` to one of these values:
 
-- Base: set `show_base = true;` and `show_lid = false;`.
-- Lid: set `show_base = false;` and `show_lid = true;`.
+- `1`: base only, at its manufacturing origin
+- `2`: lid only, at its manufacturing origin
+- `3`: closed assembly
+- `4`: closure section with representative M2.5 hardware
+- `5`: closed-assembly interference diagnostic
+- `6`: front-tab pivot-and-slide preview at the selected path angle
+- `7`: interference diagnostic at the same selected path angle
+- `8`: lid only, with control deck down for printing
 
-The committed lid STL retains the exploded-preview translation and therefore
-has a minimum Z coordinate of 41 mm. Use the slicer's **drop to bed/place on
-face** command before slicing.
+Targets `5` and `7` should be empty; any visible solid represents an overlap.
+Target `7` defaults to the middle of the assembly path (`3.75` degrees). For a
+full path check, override `pivot_preview_angle` and repeat target `7` at intervals
+from `0` through `pivot_path_max_angle` (`6.5` degrees). OpenSCAD's "current top
+level object is empty" message is the passing result for these options.
+
+The committed base and lid STLs are exported from targets `1` and `8`. Both have
+a minimum Z coordinate of 0 and can be imported directly into a slicer.
 
 ## Known fit and tolerance limitations
 
 - Clearances are tuned parametrically, not guaranteed for every printer,
   material, layer height, or shrink rate. Print a small fit test or be prepared
   to adjust `fit` in gradual steps.
-- The snap tabs and catches are sensitive to material stiffness and print
-  orientation.
+- The closure is intended to print in PLA. The front tabs are rigid locating
+  features rather than flexing snaps; tune tab and nut-pocket clearances for the
+  specific printer and filament. PETG is also suitable when additional impact
+  toughness is desired.
+- The default captive-nut pockets assume a 4.8 mm across-flats, 2.0 mm thick
+  M2.5 nut with 0.25 mm modelled clearance. Exact hardware dimensions can vary,
+  measure before printing.
 - The OLED opening and 30.4 × 28.5 mm hole pattern fit only matching modules.
   Connector position, PCB outline, and glass placement vary among SH1106 boards.
 - The 12.2 mm button holes assume a nominal 12 mm mounting barrel. Panel buttons
@@ -131,7 +177,7 @@ face** command before slicing.
   SCAD file. If the selected font is unavailable, choose another `font_i` and
   verify the resulting text before export.
 - The supplied STLs contain the current parameter values only. Changing the
-  SCAD source does not update them; re-render and re-export both affected parts.
+  SCAD source does not update them, re-render and re-export if you make changes.
 
 Dry-fit the Pi, OLED, buttons, and all cables before tightening the hardware.
 Avoid overtightening against both printed plastic and the PCBs.
