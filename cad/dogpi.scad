@@ -41,7 +41,24 @@ lid_x = lid_inner_x + 2*skirt_t;
 lid_y = lid_inner_y + 2*skirt_t;
 
 // -----------------------------------------------------------------------------
-// Serviceable lid closure
+// Shared closure and assembly parameters
+// -----------------------------------------------------------------------------
+closure_screw_x = 18.0;        // left/right screw centers
+closure_screw_d = 3.0;         // horizontal M2.5 clearance for FDM printing
+closure_screw_z = base_h - skirt_h/2; // base/global Z = 21 mm
+closure_screw_lid_z = closure_screw_z - (base_h - skirt_h);
+
+pivot_path_max_angle = 6.5;
+pivot_preview_angle = 3.75;     // middle of the validated assembly path
+pivot_preview_slide = 0.27;    // peak temporary +Y travel while lowering rear
+interference_test_gap = 0.01; // ignores the intentional stop-lip/rim contact
+
+////\\/\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//
+// Lid parameters
+////\\/\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//
+
+// -----------------------------------------------------------------------------
+// Front tuck-tab closure
 // -----------------------------------------------------------------------------
 // Two rigid tongues on the low/front lid skirt enter matching receivers in the
 // base. The rear then pivots down and is retained by two horizontal M2.5 screws
@@ -54,43 +71,9 @@ front_tab_lid_z = 1.4;         // low placement leaves room for the lid to pivot
 front_tab_root_overlap = 0.40;
 front_tab_nose_bevel = 0.45;
 
-front_tab_xy_clear = 0.25;     // receiver clearance at each tab side
-front_tab_z_clear = 0.60;      // total vertical receiver clearance
-front_receiver_depth = 2.4;    // blind pocket depth permits pivot-and-slide travel
-front_receiver_boss_w = 14.5;
-front_receiver_boss_d = 1.5;
-front_receiver_boss_h = 5.0;
 front_skirt_bevel = 1.00;      // lower-inner clearance during pivot-and-slide
-
-closure_screw_x = 18.0;        // left/right screw centers
-closure_screw_d = 3.0;         // horizontal M2.5 clearance for FDM printing
-closure_screw_z = base_h - skirt_h/2; // base/global Z = 21 mm
-closure_screw_lid_z = closure_screw_z - (base_h - skirt_h);
-
-// M2.5 nut dimensions
-closure_nut_af = 4.8;          // width across flats
-closure_nut_t = 2.0;
-closure_nut_clear = 0.25;
-closure_nut_af_clear = closure_nut_af + closure_nut_clear;
-closure_nut_t_clear = closure_nut_t + closure_nut_clear;
-closure_nut_corner_d = closure_nut_af / cos(30);
-closure_nut_y = base_y/2 - 2.5;
-
-closure_boss_wall = 1.4;
-closure_boss_w = closure_nut_af_clear + 2*closure_boss_wall;
-closure_boss_d = closure_nut_t_clear + 2*1.2;
-closure_boss_h = 8.0;
-
 closure_bearing_pad_d = 7.0;
 closure_bearing_pad_depth = 0.20;
-pivot_path_max_angle = 6.5;
-pivot_preview_angle = 3.75;     // middle of the validated assembly path
-pivot_preview_slide = 0.27;    // peak temporary +Y travel while lowering rear
-interference_test_gap = 0.01; // ignores the intentional stop-lip/rim contact
-
-//\\/\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//
-// Lid geometry / params
-//\\/\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//
 
 // -----------------------------------------------------------------------------
 // Angled control deck geometry
@@ -108,45 +91,6 @@ roof_high_top_z = roof_low_top_z + tan(panel_angle) * panel_run_y;
 // Midpoint of the sloped section, used by panel_frame()
 panel_mid_y = (-lid_y/2 + panel_rear_y) / 2;
 panel_mid_z = (roof_low_top_z + roof_high_top_z) / 2;
-
-// -----------------------------------------------------------------------------
-// Raspberry Pi Zero 2 W
-// -----------------------------------------------------------------------------
-pi_x = 65.0;
-pi_y = 30.0;
-pi_hole_inset = 3.5;
-pi_hole_dx = 58.0;
-pi_hole_dy = 23.0;
-
-pi_mount_clear_d = 2.8;
-
-pi_counterbore_d = 5.0;   // counterbore diameter
-pi_counterbore_h = 3.0;   // counterbore depth
-
-pi_right_gap = 1;
-pi_rear_gap = 2.5;
-// Pi is rotated 90 degrees so ports face the right wall.
-pi_origin_x =  base_x/2 - wall - pi_right_gap - pi_y;
-pi_origin_y =  base_y/2 - wall - pi_rear_gap - pi_x;
-
-// -----------------------------------------------------------------------------
-// Port tunnel params (based on Pi drawing X positions)
-// -----------------------------------------------------------------------------
-side_tunnel_x = base_x/2 - wall - 0.6;
-side_tunnel_depth = wall + 1.2;
-side_port_clear = 0.50;
-side_port_z = 5.1;
-
-// Connector opening sizes before applying side_port_clear in Y.
-mini_hdmi_w = 13.0;
-mini_hdmi_h = 7.0;
-micro_usb_w = 10.0;
-micro_usb_h = 7.5;
-
-// Board-view connector center X positions (from the Pi drawing/blueprint)
-mini_hdmi_c = 12.4;
-usb1_c      = 41.4;
-usb2_c      = 54.0;
 
 // -----------------------------------------------------------------------------
 // OLED module
@@ -241,9 +185,124 @@ stop_lip_inset  = 0.9;   // how far the lip projects inward
 stop_lip_h      = 0.7;   // lip thickness upward from z = skirt_h
 stop_lip_shell_overlap = 0.15;
 
-//\\/\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//
-// Helpers
-//\\/\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//
+////\\/\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//
+// Base parameters
+////\\/\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//
+
+// -----------------------------------------------------------------------------
+// Raspberry Pi Zero 2 W
+// -----------------------------------------------------------------------------
+pi_x = 65.0;
+pi_y = 30.0;
+pi_hole_inset = 3.5;
+pi_hole_dx = 58.0;
+pi_hole_dy = 23.0;
+
+pi_mount_clear_d = 2.8;
+
+pi_counterbore_d = 5.0;   // counterbore diameter
+pi_counterbore_h = 3.0;   // counterbore depth
+
+pi_right_gap = 1;
+pi_rear_gap = 2.5;
+// Pi is rotated 90 degrees so ports face the right wall.
+pi_origin_x =  base_x/2 - wall - pi_right_gap - pi_y;
+pi_origin_y =  base_y/2 - wall - pi_rear_gap - pi_x;
+
+// -----------------------------------------------------------------------------
+// Port tunnel params (based on Pi drawing X positions)
+// -----------------------------------------------------------------------------
+side_tunnel_x = base_x/2 - wall - 0.6;
+side_tunnel_depth = wall + 1.2;
+side_port_clear = 0.50;
+side_port_z = 5.1;
+
+// Connector opening sizes before applying side_port_clear in Y.
+mini_hdmi_w = 13.0;
+mini_hdmi_h = 7.0;
+micro_usb_w = 10.0;
+micro_usb_h = 7.5;
+
+// Board-view connector center X positions (from the Pi drawing/blueprint)
+mini_hdmi_c = 12.4;
+usb1_c      = 41.4;
+usb2_c      = 54.0;
+
+// -----------------------------------------------------------------------------
+// Front tab receivers
+// -----------------------------------------------------------------------------
+front_tab_xy_clear = 0.25;     // receiver clearance at each tab side
+front_tab_z_clear = 0.60;      // total vertical receiver clearance
+front_receiver_depth = 2.4;    // blind pocket depth permits pivot-and-slide travel
+front_receiver_boss_w = 14.5;
+front_receiver_boss_d = 1.5;
+front_receiver_boss_h = 5.0;
+
+// M2.5 nut dimensions
+closure_nut_af = 4.8;          // width across flats
+closure_nut_t = 2.0;
+closure_nut_clear = 0.25;
+closure_nut_af_clear = closure_nut_af + closure_nut_clear;
+closure_nut_t_clear = closure_nut_t + closure_nut_clear;
+closure_nut_corner_d = closure_nut_af / cos(30);
+closure_nut_y = base_y/2 - 2.5;
+
+closure_boss_wall = 1.4;
+closure_boss_w = closure_nut_af_clear + 2*closure_boss_wall;
+closure_boss_d = closure_nut_t_clear + 2*1.2;
+closure_boss_h = 8.0;
+
+// -----------------------------------------------------------------------------
+// Derived receiver and nut-pocket dimensions
+// -----------------------------------------------------------------------------
+front_tab_global_z = (base_h - skirt_h) + front_tab_lid_z;
+front_receiver_w = front_tab_w + 2*front_tab_xy_clear;
+front_receiver_h = front_tab_t + front_tab_z_clear;
+
+closure_boss_y_min = base_y/2 - closure_boss_d;
+closure_nut_slot_bottom = closure_screw_z - closure_nut_corner_d/2;
+
+////\\/\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//
+// Shared helpers
+////\\/\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//
+
+module rounded_rect_2d(sz=[10,10], r=2) {
+    w = sz[0];
+    h = sz[1];
+    rr = min(r, min(w, h)/2 - 0.01);
+    hull() {
+        for (sx = [-1, 1])
+            for (sy = [-1, 1])
+                translate([sx*(w/2 - rr), sy*(h/2 - rr)]) circle(r=rr);
+    }
+}
+
+module xy_hole_grid(cx=0, cy=0, dx=10, dy=10) {
+    for (sx=[-1,1])
+        for (sy=[-1,1])
+            translate([cx + sx*dx/2, cy + sy*dy/2, 0]) children();
+}
+
+////\\/\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//
+// Lid helpers
+////\\/\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//
+
+// Profile is specified in [y,z] points and extruded across X.
+module yz_profile_extrude(profile_pts, width) {
+    rotate([90,0,90])
+        linear_extrude(height=width, center=true, convexity=10)
+            polygon(points=profile_pts);
+}
+
+// Local coordinate system for the angled control deck.
+// local x = left/right across case
+// local y = along the sloped panel
+// local z = panel normal
+module panel_frame() {
+    translate([0, panel_mid_y, panel_mid_z])
+        rotate([panel_angle, 0, 0])
+            children();
+}
 
 module lid_inner_stop_lip_3sided() {
     // Bottom lands at local Z=skirt_h, or global Z=base_h when assembled.
@@ -321,135 +380,10 @@ module lid_markings() {
                     );
     }
 }
-module side_port_tunnel_center(x_center_from_pi_left, z0, w, h) {
-    // Preserve connector left-to-right order when viewed on the right wall.
-    y_center_side = pi_origin_y + x_center_from_pi_left;
-
-    translate([
-        side_tunnel_x,
-        y_center_side - w/2 - side_port_clear,
-        z0
-    ])
-        cube([
-            side_tunnel_depth,
-            w + 2*side_port_clear,
-            h
-        ], center=false);
-}
-
-module rounded_rect_2d(sz=[10,10], r=2) {
-    w = sz[0];
-    h = sz[1];
-    rr = min(r, min(w, h)/2 - 0.01);
-    hull() {
-        for (sx = [-1, 1])
-            for (sy = [-1, 1])
-                translate([sx*(w/2 - rr), sy*(h/2 - rr)]) circle(r=rr);
-    }
-}
-
-module rounded_prism(sz=[10,10], h=2, r=2) {
-    linear_extrude(height=h)
-        rounded_rect_2d(sz, r);
-}
-
-module xy_hole_grid(cx=0, cy=0, dx=10, dy=10) {
-    for (sx=[-1,1])
-        for (sy=[-1,1])
-            translate([cx + sx*dx/2, cy + sy*dy/2, 0]) children();
-}
-
-// Profile is specified in [y,z] points and extruded across X.
-module yz_profile_extrude(profile_pts, width) {
-    rotate([90,0,90])
-        linear_extrude(height=width, center=true, convexity=10)
-            polygon(points=profile_pts);
-}
-
-// Local coordinate system for the angled control deck.
-// local x = left/right across case
-// local y = along the sloped panel
-// local z = panel normal
-module panel_frame() {
-    translate([0, panel_mid_y, panel_mid_z])
-        rotate([panel_angle, 0, 0])
-            children();
-}
 
 // -----------------------------------------------------------------------------
-// Closure helpers
+// Lid closure geometry
 // -----------------------------------------------------------------------------
-front_tab_global_z = (base_h - skirt_h) + front_tab_lid_z;
-front_receiver_w = front_tab_w + 2*front_tab_xy_clear;
-front_receiver_h = front_tab_t + front_tab_z_clear;
-
-closure_boss_y_min = base_y/2 - closure_boss_d;
-closure_nut_slot_bottom = closure_screw_z - closure_nut_corner_d/2;
-
-module base_front_receiver_bosses() {
-    for (x = [-front_tab_x, front_tab_x])
-        translate([
-            x,
-            -base_y/2 + wall + front_receiver_boss_d/2 - 0.10,
-            front_tab_global_z
-        ])
-            cube([
-                front_receiver_boss_w,
-                front_receiver_boss_d + 0.20,
-                front_receiver_boss_h
-            ], center=true);
-}
-
-module base_front_receiver_slots() {
-    for (x = [-front_tab_x, front_tab_x])
-        translate([
-            x - front_receiver_w/2,
-            -base_y/2 - 0.50,
-            front_tab_global_z - front_receiver_h/2
-        ])
-            cube([
-                front_receiver_w,
-                front_receiver_depth + 0.50,
-                front_receiver_h
-            ]);
-}
-
-module base_rear_closure_bosses() {
-    for (x = [-closure_screw_x, closure_screw_x])
-        translate([
-            x,
-            base_y/2 - closure_boss_d/2,
-            base_h - closure_boss_h/2
-        ])
-            cube([closure_boss_w, closure_boss_d, closure_boss_h], center=true);
-}
-
-module base_rear_closure_cutouts() {
-    for (x = [-closure_screw_x, closure_screw_x]) {
-        // Horizontal clearance bore from the rear exterior into the cavity.
-        translate([x, base_y/2 + 1, closure_screw_z])
-            rotate([90, 0, 0])
-                cylinder(
-                    h=(base_y/2 + 1) - (closure_boss_y_min - 0.50),
-                    d=closure_screw_d,
-                    $fn=32
-                );
-
-        // Support-free top-loading slot. The nut's vertical points seat at the
-        // calculated bottom while its flats are restrained along X.
-        translate([
-            x - closure_nut_af_clear/2,
-            closure_nut_y - closure_nut_t_clear/2,
-            closure_nut_slot_bottom
-        ])
-            cube([
-                closure_nut_af_clear,
-                closure_nut_t_clear,
-                base_h - closure_nut_slot_bottom + 0.20
-            ]);
-    }
-}
-
 module lid_front_tuck_tabs() {
     front_inner_y = -lid_inner_y/2;
     body_end_y = front_inner_y + front_tab_depth - front_tab_nose_bevel;
@@ -512,57 +446,9 @@ module lid_rear_screw_holes() {
                 );
 }
 
-
-//\\/\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//
-// Base
-//\\/\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//
-module base_part() {
-    difference() {
-        union() {
-            // Hollow shell first, then add closure bosses so the main cavity
-            // subtraction does not erase their inward projections.
-            difference() {
-                rounded_prism([base_x, base_y], base_h, corner_r);
-
-                translate([0, 0, floor_t])
-                    rounded_prism(
-                        [base_x - 2*wall, base_y - 2*wall],
-                        base_h,
-                        max(0.1, corner_r - wall)
-                    );
-
-                for (sx=[0, pi_hole_dx])
-                    for (sy=[0, pi_hole_dy]) {
-                        px = pi_origin_x + pi_hole_inset + sy;
-                        py = pi_origin_y + (pi_x - pi_hole_inset - sx);
-
-                        // Through-hole for M2.5 screw.
-                        translate([px, py, -0.01])
-                            cylinder(h=floor_t + 0.02, d=pi_mount_clear_d);
-
-                        // Counterbore from the exterior bottom.
-                        translate([px, py, -0.01])
-                            cylinder(h=pi_counterbore_h + 0.02, d=pi_counterbore_d);
-                    }
-
-                // Right-side port tunnels: mini HDMI + 2x micro USB.
-                side_port_tunnel_center(mini_hdmi_c, side_port_z, mini_hdmi_w, mini_hdmi_h);
-                side_port_tunnel_center(usb1_c,      side_port_z, micro_usb_w, micro_usb_h);
-                side_port_tunnel_center(usb2_c,      side_port_z, micro_usb_w, micro_usb_h);
-            }
-
-            base_front_receiver_bosses();
-            base_rear_closure_bosses();
-        }
-
-        base_front_receiver_slots();
-        base_rear_closure_cutouts();
-    }
-}
-
-//\\/\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//
-// Lid
-//\\/\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//
+// -----------------------------------------------------------------------------
+// Lid shell and final part
+// -----------------------------------------------------------------------------
 outer_profile = [
     [-lid_y/2, 0],
     [ lid_y/2, 0],
@@ -631,6 +517,141 @@ module lid_part() {
     }
 }
 
+////\\/\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//
+// Base helpers
+////\\/\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//
+
+module rounded_prism(sz=[10,10], h=2, r=2) {
+    linear_extrude(height=h)
+        rounded_rect_2d(sz, r);
+}
+
+module side_port_tunnel_center(x_center_from_pi_left, z0, w, h) {
+    // Preserve connector left-to-right order when viewed on the right wall.
+    y_center_side = pi_origin_y + x_center_from_pi_left;
+
+    translate([
+        side_tunnel_x,
+        y_center_side - w/2 - side_port_clear,
+        z0
+    ])
+        cube([
+            side_tunnel_depth,
+            w + 2*side_port_clear,
+            h
+        ], center=false);
+}
+
+// -----------------------------------------------------------------------------
+// Base closure geometry
+// -----------------------------------------------------------------------------
+module base_front_receiver_bosses() {
+    for (x = [-front_tab_x, front_tab_x])
+        translate([
+            x,
+            -base_y/2 + wall + front_receiver_boss_d/2 - 0.10,
+            front_tab_global_z
+        ])
+            cube([
+                front_receiver_boss_w,
+                front_receiver_boss_d + 0.20,
+                front_receiver_boss_h
+            ], center=true);
+}
+
+module base_front_receiver_slots() {
+    for (x = [-front_tab_x, front_tab_x])
+        translate([
+            x - front_receiver_w/2,
+            -base_y/2 - 0.50,
+            front_tab_global_z - front_receiver_h/2
+        ])
+            cube([
+                front_receiver_w,
+                front_receiver_depth + 0.50,
+                front_receiver_h
+            ]);
+}
+
+module base_rear_closure_bosses() {
+    for (x = [-closure_screw_x, closure_screw_x])
+        translate([
+            x,
+            base_y/2 - closure_boss_d/2,
+            base_h - closure_boss_h/2
+        ])
+            cube([closure_boss_w, closure_boss_d, closure_boss_h], center=true);
+}
+
+module base_rear_closure_cutouts() {
+    for (x = [-closure_screw_x, closure_screw_x]) {
+        // Horizontal clearance bore from the rear exterior into the cavity.
+        translate([x, base_y/2 + 1, closure_screw_z])
+            rotate([90, 0, 0])
+                cylinder(
+                    h=(base_y/2 + 1) - (closure_boss_y_min - 0.50),
+                    d=closure_screw_d,
+                    $fn=32
+                );
+
+        // Support-free top-loading slot. The nut's vertical points seat at the
+        // calculated bottom while its flats are restrained along X.
+        translate([
+            x - closure_nut_af_clear/2,
+            closure_nut_y - closure_nut_t_clear/2,
+            closure_nut_slot_bottom
+        ])
+            cube([
+                closure_nut_af_clear,
+                closure_nut_t_clear,
+                base_h - closure_nut_slot_bottom + 0.20
+            ]);
+    }
+}
+
+module base_part() {
+    difference() {
+        union() {
+            // Hollow shell first, then add closure bosses so the main cavity
+            // subtraction does not erase their inward projections.
+            difference() {
+                rounded_prism([base_x, base_y], base_h, corner_r);
+
+                translate([0, 0, floor_t])
+                    rounded_prism(
+                        [base_x - 2*wall, base_y - 2*wall],
+                        base_h,
+                        max(0.1, corner_r - wall)
+                    );
+
+                for (sx=[0, pi_hole_dx])
+                    for (sy=[0, pi_hole_dy]) {
+                        px = pi_origin_x + pi_hole_inset + sy;
+                        py = pi_origin_y + (pi_x - pi_hole_inset - sx);
+
+                        // Through-hole for M2.5 screw.
+                        translate([px, py, -0.01])
+                            cylinder(h=floor_t + 0.02, d=pi_mount_clear_d);
+
+                        // Counterbore from the exterior bottom.
+                        translate([px, py, -0.01])
+                            cylinder(h=pi_counterbore_h + 0.02, d=pi_counterbore_d);
+                    }
+
+                // Right-side port tunnels: mini HDMI + 2x micro USB.
+                side_port_tunnel_center(mini_hdmi_c, side_port_z, mini_hdmi_w, mini_hdmi_h);
+                side_port_tunnel_center(usb1_c,      side_port_z, micro_usb_w, micro_usb_h);
+                side_port_tunnel_center(usb2_c,      side_port_z, micro_usb_w, micro_usb_h);
+            }
+
+            base_front_receiver_bosses();
+            base_rear_closure_bosses();
+        }
+
+        base_front_receiver_slots();
+        base_rear_closure_cutouts();
+    }
+}
 
 //\\/\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//
 // Scene
@@ -640,7 +661,8 @@ lid_color  = "silver";
 base_color = "black";
 // CLI-friendly selector: 0=scene, 1=base, 2=lid, 3=assembly,
 // 4=closure section, 5=assembly interference, 6=pivot preview,
-// 7=pivot interference. Numeric values avoid shell quoting differences.
+// 7=pivot interference, 8=control deck down for printing.
+// Numeric values avoid shell quoting differences.
 render_target = 0;
 
 module scene() {
@@ -654,6 +676,16 @@ module scene() {
         color(lid_color)
             translate([0, 0, lid_z]) lid_part();
     }
+}
+
+module lid_control_deck_down() {
+    deck_plane_offset =
+        roof_low_top_z * cos(panel_angle)
+        + lid_y / 2 * sin(panel_angle);
+
+    translate([0, 0, deck_plane_offset])
+        rotate([180 - panel_angle, 0, 0])
+            lid_part();
 }
 
 module closure_section() {
@@ -771,6 +803,8 @@ if (render_target == 1) {
         );
 } else if (render_target == 7) {
     pivot_interference();
+} else if (render_target == 8) {
+    lid_control_deck_down();
 } else {
     scene();
 }
